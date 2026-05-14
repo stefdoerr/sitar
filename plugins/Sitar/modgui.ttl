@@ -1,0 +1,82 @@
+@prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
+@prefix modgui: <http://moddevices.com/ns/modgui#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://sitar.local/plugins/sitar>
+    modgui:gui [
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate       <modgui/icon-sitar.html> ;
+        modgui:stylesheet         <modgui/stylesheet-sitar.css> ;
+        modgui:javascript         <modgui/script-sitar.js> ;
+        modgui:screenshot         <modgui/screenshot-sitar.png> ;
+        modgui:thumbnail          <modgui/thumbnail-sitar.png> ;
+
+        modgui:brand "sitar" ;
+        modgui:label "Sympathetic Sitar" ;
+        modgui:model "boxy" ;
+        modgui:panel "3-knob" ;
+        modgui:color "wood3" ;
+        modgui:knob  "gold" ;
+
+        modgui:port [
+            lv2:symbol "string_1" ;
+            lv2:name "String 1"
+        ] , [
+            lv2:symbol "string_2" ;
+            lv2:name "String 2"
+        ] , [
+            lv2:symbol "string_3" ;
+            lv2:name "String 3"
+        ] , [
+            lv2:symbol "string_4" ;
+            lv2:name "String 4"
+        ] , [
+            lv2:symbol "string_5" ;
+            lv2:name "String 5"
+        ] , [
+            lv2:symbol "string_6" ;
+            lv2:name "String 6"
+        ] , [
+            lv2:symbol "string_7" ;
+            lv2:name "String 7"
+        ] , [
+            lv2:symbol "string_8" ;
+            lv2:name "String 8"
+        ] , [
+            lv2:symbol "string_9" ;
+            lv2:name "String 9"
+        ] , [
+            lv2:symbol "string_10" ;
+            lv2:name "String 10"
+        ] , [
+            lv2:symbol "string_11" ;
+            lv2:name "String 11"
+        ] , [
+            lv2:symbol "string_12" ;
+            lv2:name "String 12"
+        ] , [
+            lv2:symbol "string_13" ;
+            lv2:name "String 13"
+        ] , [
+            lv2:symbol "octave" ;
+            lv2:name "Octave"
+        ] , [
+            lv2:symbol "decay" ;
+            lv2:name "Decay"
+        ] , [
+            lv2:symbol "mix" ;
+            lv2:name "Mix"
+        ] , [
+            lv2:symbol "jawari" ;
+            lv2:name "Jawari"
+        ] , [
+            lv2:symbol "scale" ;
+            lv2:name "Scale"
+        ] , [
+            lv2:symbol "root_note" ;
+            lv2:name "Root Note"
+        ] , [
+            lv2:symbol "audition" ;
+            lv2:name "Test Scale"
+        ]
+    ] .

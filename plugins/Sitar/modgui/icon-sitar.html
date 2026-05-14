@@ -1,0 +1,204 @@
+<div class="mod-pedal sitar-pedal mod-pedal-sitar mod-{{color}} {{color}}">
+
+    <div mod-role="drag-handle" class="mod-drag-handle"></div>
+
+    <div class="mod-plugin-brand"><h1>{{brand}}</h1></div>
+    <div class="mod-plugin-name"><h1>{{label}}</h1></div>
+
+    <!-- Bypass light + footswitch (required by MOD pedalboard) -->
+    <div class="mod-light on" mod-role="bypass-light"></div>
+    <div class="mod-footswitch" mod-role="bypass"></div>
+
+    <!-- Scale + Root selects (pure JS, not bound to LV2 ports) -->
+    <div class="sitar-scale-bar">
+        <label class="sitar-field">
+            <span class="sitar-field-label">SCALE</span>
+            <select class="sitar-select" mod-role="sitar-scale">
+                <optgroup label="Western">
+                    <option value="major">Major</option>
+                    <option value="natural-minor">Natural Minor</option>
+                    <option value="harmonic-minor">Harmonic Minor</option>
+                    <option value="melodic-minor">Melodic Minor</option>
+                    <option value="dorian">Dorian</option>
+                    <option value="phrygian">Phrygian</option>
+                    <option value="lydian">Lydian</option>
+                    <option value="mixolydian">Mixolydian</option>
+                    <option value="locrian">Locrian</option>
+                    <option value="major-pentatonic">Major Pentatonic</option>
+                    <option value="minor-pentatonic">Minor Pentatonic</option>
+                    <option value="blues">Blues</option>
+                    <option value="pythagorean">Pythagorean</option>
+                    <option value="chromatic-12tet">Chromatic (12-TET)</option>
+                </optgroup>
+                <optgroup label="Turkish Makams">
+                    <option value="makam-rast">Rast</option>
+                    <option value="makam-ussak">Uşşak</option>
+                    <option value="makam-hicaz">Hicaz</option>
+                    <option value="makam-saba">Saba</option>
+                </optgroup>
+                <optgroup label="Indian Ragas">
+                    <option value="raga-yaman">Yaman</option>
+                    <option value="raga-bhairav">Bhairav</option>
+                    <option value="raga-bhairavi">Bhairavi</option>
+                    <option value="raga-todi">Todi</option>
+                    <option value="raga-marwa">Marwa</option>
+                    <option value="raga-malkauns">Malkauns</option>
+                </optgroup>
+            </select>
+        </label>
+
+        <label class="sitar-field">
+            <span class="sitar-field-label">ROOT</span>
+            <select class="sitar-select" mod-role="sitar-root">
+                <option value="65.41">C2</option>
+                <option value="69.30">C#2</option>
+                <option value="73.42">D2</option>
+                <option value="77.78">D#2</option>
+                <option value="82.41">E2</option>
+                <option value="87.31">F2</option>
+                <option value="92.50">F#2</option>
+                <option value="98.00">G2</option>
+                <option value="103.83">G#2</option>
+                <option value="110.00">A2</option>
+                <option value="116.54">A#2</option>
+                <option value="123.47">B2</option>
+            </select>
+        </label>
+
+        <div class="sitar-field sitar-octave-field">
+            <span class="sitar-field-label">OCT</span>
+            <div class="mod-knob sitar-knob-octave">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="octave"></div>
+                <div class="mod-knob-value" contenteditable="false"
+                     mod-role="input-control-value" mod-port-symbol="octave"></div>
+            </div>
+        </div>
+
+        <div class="sitar-field sitar-test-field">
+            <span class="sitar-field-label">TEST</span>
+            <div class="sitar-test-btn mod-toggle off"
+                 mod-role="input-control-port"
+                 mod-port-symbol="audition"
+                 mod-widget="switch">
+                <span class="sitar-test-icon">&#9654;</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 13 string knobs -->
+    <div class="sitar-strings">
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_1"></div>
+            </div>
+            <span class="sitar-string-num">1</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_2"></div>
+            </div>
+            <span class="sitar-string-num">2</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_3"></div>
+            </div>
+            <span class="sitar-string-num">3</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_4"></div>
+            </div>
+            <span class="sitar-string-num">4</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_5"></div>
+            </div>
+            <span class="sitar-string-num">5</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_6"></div>
+            </div>
+            <span class="sitar-string-num">6</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_7"></div>
+            </div>
+            <span class="sitar-string-num">7</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_8"></div>
+            </div>
+            <span class="sitar-string-num">8</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_9"></div>
+            </div>
+            <span class="sitar-string-num">9</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_10"></div>
+            </div>
+            <span class="sitar-string-num">10</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_11"></div>
+            </div>
+            <span class="sitar-string-num">11</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_12"></div>
+            </div>
+            <span class="sitar-string-num">12</span>
+        </div>
+        <div class="sitar-string">
+            <div class="mod-knob sitar-knob-string">
+                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_13"></div>
+            </div>
+            <span class="sitar-string-num">13</span>
+        </div>
+    </div>
+
+    <!-- Tone knobs: Decay / Jawari / Mix -->
+    <div class="sitar-tone">
+        <div class="mod-knob sitar-knob-tone">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="decay"></div>
+            <span class="mod-knob-title">DECAY</span>
+        </div>
+        <div class="mod-knob sitar-knob-tone">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="jawari"></div>
+            <span class="mod-knob-title">JAWARI</span>
+        </div>
+        <div class="mod-knob sitar-knob-tone">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="mix"></div>
+            <span class="mod-knob-title">MIX</span>
+        </div>
+    </div>
+
+    <!-- Audio I/O — required structure for pedalboard connections -->
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected" title="{{name}}"
+             mod-role="input-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected" title="{{name}}"
+             mod-role="output-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
+
+</div>

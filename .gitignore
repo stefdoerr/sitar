@@ -1,0 +1,16 @@
+# Build artefacts
+/bin/
+/build/
+
+# DPF's generated TTL helper binary (built inside the submodule)
+/dpf/utils/lv2_ttl_generator
+/dpf/utils/lv2_ttl_generator.exe
+
+# Editor / OS scratch
+*.o
+*.d
+*.so
+*.dylib
+*.dll
+*.swp
+.DS_Store
