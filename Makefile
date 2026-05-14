@@ -162,3 +162,38 @@ dwarf-deploy:
 dwarf: dwarf-build dwarf-deploy
 
 .PHONY: dwarf dwarf-build dwarf-clean dwarf-deploy dwarf-bootstrap mpb-sync-recipe
+
+# ---------------------------------------------------------------------------------------------------------------------
+# release: tag the current commit as v$(version) and push the tag, which
+# triggers the GitHub Actions release workflow.
+#
+#   make release version=0.1.0
+#
+# Refuses to run on a dirty tree or if the tag already exists, so accidental
+# releases are hard to make.
+
+release:
+	@if [ -z "$(version)" ]; then \
+		echo "error: version is required."; \
+		echo "       usage: make release version=x.y.z"; \
+		exit 1; \
+	fi
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "error: working tree is dirty. Commit or stash first."; \
+		git status --short; \
+		exit 1; \
+	fi
+	@if git rev-parse -q --verify "refs/tags/v$(version)" >/dev/null 2>&1; then \
+		echo "error: tag v$(version) already exists locally."; \
+		exit 1; \
+	fi
+	@echo "==> Pushing branch (so the tagged commit is reachable on origin)"
+	git push
+	@echo "==> Tagging v$(version)"
+	git tag -a "v$(version)" -m "Release v$(version)"
+	git push origin "v$(version)"
+	@echo
+	@echo "Tag v$(version) pushed. CI will build and publish the release shortly:"
+	@echo "  https://github.com/$$(git config --get remote.origin.url | sed -E 's|.*[:/]([^:/]+/[^/]+?)(\.git)?$$|\1|')/actions"
+
+.PHONY: release
