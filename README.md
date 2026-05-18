@@ -33,6 +33,11 @@ pick.
   clipped — moving the knob back unclips them losslessly.
 * **Decay** with a perceptually-linear curve (knob travel ≈ change in
   ring time)
+* **Bloom** — shared bridge-bus cross-coupling: every active string is fed
+  a small fraction of the others' output through a DC-blocked, tanh-saturated
+  bus, mirroring how a real sitar's *tarafs* share one physical bridge and
+  excite each other. Adds a subtle ring extension and harmonic shimmer;
+  deliberately scaled to stay stable across all Scale × Decay combinations.
 * **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
   buzz of a real sitar's *jawari* bridge
 * **Mix** — dry/wet blend
@@ -74,19 +79,24 @@ Restart MOD Desktop and the plugin appears under brand **"sitar"** as
 
 ### MOD Dwarf (hardware, aarch64)
 
-The Dwarf needs an aarch64 cross-build. We use the official
-[`mod-plugin-builder`](https://github.com/moddevices/mod-plugin-builder)
-via Docker. From a clean machine:
+Cross-compile via Docker — fully self-contained. The only host requirement
+is Docker. From a clean machine:
 
 ```bash
-make dwarf-bootstrap      # one-time, ~30-60 min — clones MPB, builds Docker image, builds cross-toolchain
-make dwarf                # build .lv2 + push to Dwarf at 192.168.51.1
+make dwarf-image          # one-time, ~30-60 min — builds Docker image with the aarch64 cross-toolchain inline
+make dwarf                # cross-build + scp to Dwarf at 192.168.51.1
 ```
 
-`make dwarf` is short for `make dwarf-build && make dwarf-deploy`. Override
-defaults on the command line, e.g.
-`make dwarf DWARF_HOST=sitar.local MPB_DIR=/opt/mpb`. See
-[`mod-build/README.md`](mod-build/README.md) for the full breakdown.
+`make dwarf` is `make dwarf-build && make dwarf-deploy`. The bundle lands
+locally at `bin/dwarf/sitar.lv2` (also pushed to `/root/.lv2/` on the
+device). Override defaults on the command line:
+
+```bash
+make dwarf DWARF_HOST=sitar.local DWARF_USER=admin DWARF_LV2DIR=/usr/lib/lv2
+```
+
+The vendored Docker setup (toolchain targets glibc 2.27 + gcc 9.4.0, the
+Dwarf's exact ABI) lives in [`mod-build/`](mod-build/README.md).
 
 ### Generic LV2 host (Carla, jalv, Reaper, Ardour, …)
 
@@ -108,6 +118,14 @@ on the next scan.
   Pluck a guitar, hum into a mic, or feed a synth into it.
 * **Decay** below 0.3 is for percussive plucks; 0.5–0.7 for natural
   sympathetic feel; 0.9+ becomes a sustained drone.
+* **Bloom** at 0 is fully independent strings (input-driven only).
+  Around 0.3–0.6 adds a subtle ring extension as strings nudge each other
+  through the shared bridge; at the top of the knob you get a ~2× boost
+  to sustained resonance. Bloom is deliberately conservative — full
+  cross-coupling at high Decay would run away into self-oscillation
+  because feedback combs have resonance peaks at every harmonic of their
+  tuned frequency, so multiple strings line up at the same pitch. The
+  current setting trades drone-like wash for predictable stability.
 * The default **Mix** is 0.5 (dry + wet). For a pure sympathetic effect
   put it in a parallel chain at Mix = 1.0 and blend manually.
 * **Test Scale** sequences all 13 strings as a 26-second pluck pattern, so

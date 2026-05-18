@@ -78,5 +78,8 @@
         ] , [
             lv2:symbol "audition" ;
             lv2:name "Test Scale"
+        ] , [
+            lv2:symbol "bloom" ;
+            lv2:name "Bloom"
         ]
     ] .

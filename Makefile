@@ -65,103 +65,56 @@ install: all
 .PHONY: install
 
 # ---------------------------------------------------------------------------------------------------------------------
-# MOD Dwarf cross-build via mod-plugin-builder + Docker.
+# MOD Dwarf cross-build — self-contained, no host workdir or external clones.
 #
-# Variables (override on the command line, e.g.  make dwarf-build MPB_DIR=/opt/mpb):
-#   MPB_DIR       — path to a clone of moddevices/mod-plugin-builder
-#   MPB_WORKDIR   — where MPB stores toolchain + built plugins
-#   MPB_IMAGE     — name of the docker image built from MPB's Dockerfile
-#   MPB_PLATFORM  — target platform (moddwarf-new for current Dwarf hardware)
-#   DWARF_HOST    — IP/hostname of the connected Dwarf for deployment
-
-MPB_DIR      ?= $(HOME)/mod-plugin-builder
-MPB_WORKDIR  ?= $(HOME)/mod-workdir
-MPB_IMAGE    ?= mpb-moddwarf
-MPB_PLATFORM ?= moddwarf-new
+# Everything lives in a vendored Docker image (mod-build/Dockerfile) that
+# bakes in the mod-plugin-builder cross-toolchain (aarch64, glibc 2.27,
+# gcc 9.4.0 — matching Dwarf firmware). First `make dwarf-image` is slow
+# (~30-60 min, one-time per machine). After that, `make dwarf-build` is
+# ~10s and produces bin/dwarf/sitar.lv2 ready to scp.
+#
+# Override on the command line as needed, e.g.
+#   make dwarf-deploy DWARF_HOST=sitar.local DWARF_USER=admin
+SITAR_IMAGE  ?= sitar-cross
 DWARF_HOST   ?= 192.168.51.1
+DWARF_USER   ?= root
+DWARF_LV2DIR ?= /root/.lv2
 
-DWARF_BUNDLE = $(MPB_WORKDIR)/$(MPB_PLATFORM)/plugins/sitar.lv2
+DWARF_BUNDLE := bin/dwarf/sitar.lv2
 
-# Bind-mount this repo into the build container so the recipe (which uses
-# SITAR_SITE_METHOD=local) can copy the current working tree as source. No
-# git push or SHA bump is needed for local iteration — edits in this repo
-# show up in the very next dwarf-build.
-MPB_DOCKER_RUN = docker run --rm -i \
-	-v "$(MPB_DIR):/home/builder/mod-plugin-builder" \
-	-v "$(MPB_WORKDIR):/root/mod-workdir" \
-	-v "$(CURDIR):/home/builder/sitar-src:ro" \
-	-w /home/builder/mod-plugin-builder \
-	$(MPB_IMAGE)
+# 1. Build the cross-toolchain image. One-time, ~30-60 min, cached forever.
+dwarf-image:
+	docker build -t $(SITAR_IMAGE) mod-build/
 
-# Marker files for the one-time setup steps. Using marker files lets Make
-# skip them automatically once they're done.
-MPB_CLONE_STAMP      := $(MPB_DIR)/Makefile
-MPB_IMAGE_STAMP      := $(MPB_WORKDIR)/.image-built-$(MPB_PLATFORM)
-MPB_BOOTSTRAP_STAMP  := $(MPB_WORKDIR)/.bootstrapped-$(MPB_PLATFORM)
-
-# 1. Clone mod-plugin-builder automatically on first use.
-$(MPB_CLONE_STAMP):
-	@echo "==> Cloning mod-plugin-builder into $(MPB_DIR)"
-	git clone https://github.com/moddevices/mod-plugin-builder $(MPB_DIR)
-
-# 2. Build the build-environment Docker image on first use.
-$(MPB_IMAGE_STAMP): $(MPB_CLONE_STAMP)
-	@echo "==> Building Docker image $(MPB_IMAGE)"
-	@mkdir -p $(MPB_WORKDIR)
-	docker build --build-arg platform=$(MPB_PLATFORM) -t $(MPB_IMAGE) $(MPB_DIR)/docker
-	@touch $@
-
-# 3. Bootstrap the cross-toolchain inside the image. This is the slow
-#    step (~30-60 min) and is gated behind an explicit target so it never
-#    runs by surprise. Subsequent rebuilds reuse the cached toolchain.
-dwarf-bootstrap: $(MPB_IMAGE_STAMP)
-	@echo "==> Bootstrapping the $(MPB_PLATFORM) cross-toolchain (~30-60 min, one-time)"
-	$(MPB_DOCKER_RUN) ./bootstrap.sh $(MPB_PLATFORM)
-	@touch $(MPB_BOOTSTRAP_STAMP)
-
-# Sync our recipe into MPB's package tree before each build, so local
-# edits to mod-build/sitar.mk are picked up immediately.
-mpb-sync-recipe: $(MPB_CLONE_STAMP)
-	@mkdir -p "$(MPB_DIR)/plugins/package/sitar"
-	cp -f mod-build/sitar.mk "$(MPB_DIR)/plugins/package/sitar/"
-
-# Build the aarch64 .lv2 bundle inside the MPB Docker image. The dirclean
-# is needed because buildroot caches the extracted source from the previous
-# run and won't re-copy the working tree otherwise. The dirclean is cheap
-# (only nukes the per-package build dir, not the toolchain), so a full
-# rebuild is still ~10-20s.
-dwarf-build: $(MPB_IMAGE_STAMP) mpb-sync-recipe
-	@if [ ! -f "$(MPB_BOOTSTRAP_STAMP)" ]; then \
-		echo "error: $(MPB_PLATFORM) cross-toolchain not bootstrapped yet"; \
-		echo "       Run 'make dwarf-bootstrap' first (~30-60 min, one-time)."; \
-		exit 1; \
+# 2. Cross-build the plugin. Runs build-sitar.sh inside the image, which
+#    does a native build for .ttl/modgui assets and a cross-build for the
+#    aarch64 .so, dropping the assembled bundle into bin/dwarf/sitar.lv2.
+dwarf-build:
+	@if ! docker image inspect $(SITAR_IMAGE) >/dev/null 2>&1; then \
+		echo "==> $(SITAR_IMAGE) image not built yet — building (~30-60 min, one-time)"; \
+		$(MAKE) dwarf-image; \
 	fi
-	$(MPB_DOCKER_RUN) ./build $(MPB_PLATFORM) sitar-dirclean
-	$(MPB_DOCKER_RUN) ./build $(MPB_PLATFORM) sitar
+	@mkdir -p bin/dwarf
+	docker run --rm \
+		-e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g) \
+		-v "$(CURDIR):/src:ro" \
+		-v "$(CURDIR)/bin/dwarf:/out" \
+		$(SITAR_IMAGE) \
+		bash /src/mod-build/build-sitar.sh
 
-# Just the dirclean, in case something is wedged.
-dwarf-clean: mpb-sync-recipe
-	$(MPB_DOCKER_RUN) ./build $(MPB_PLATFORM) sitar-dirclean
-
-# Upload the most recently built bundle to a connected Dwarf.
-# Override DWARF_HOST=<ip> if your device isn't on the default 192.168.51.1.
+# 3. Push the bundle to a connected Dwarf via scp. The Dwarf's `/root/.lv2/`
+#    is the per-user plugin dir and survives firmware updates.
 dwarf-deploy:
 	@if [ ! -d "$(DWARF_BUNDLE)" ]; then \
-		echo "error: no built bundle at $(DWARF_BUNDLE)"; \
-		echo "       Run 'make dwarf-build' first."; \
+		echo "error: no bundle at $(DWARF_BUNDLE) — run 'make dwarf-build' first."; \
 		exit 1; \
 	fi
-	@echo "Uploading sitar.lv2 to http://$(DWARF_HOST)/sdk/install"
-	cd "$(MPB_WORKDIR)/$(MPB_PLATFORM)/plugins" && \
-		tar czf - sitar.lv2 | base64 | \
-		curl --silent --show-error --fail \
-			-F 'package=@-' "http://$(DWARF_HOST)/sdk/install"
-	@echo
+	scp -r "$(DWARF_BUNDLE)" "$(DWARF_USER)@$(DWARF_HOST):$(DWARF_LV2DIR)/"
 
 # Convenience: build then deploy.
 dwarf: dwarf-build dwarf-deploy
 
-.PHONY: dwarf dwarf-build dwarf-clean dwarf-deploy dwarf-bootstrap mpb-sync-recipe
+.PHONY: dwarf dwarf-build dwarf-image dwarf-deploy
 
 # ---------------------------------------------------------------------------------------------------------------------
 # release: tag the current commit as v$(version) and push the tag, which

@@ -123,8 +123,24 @@ public:
         kParamScale,                      // 17  — enum, selects from kScales[]
         kParamRootNote,                   // 18  — enum, selects from kRootHz[]
         kParamAudition,                   // 19  — boolean, "Test Scale" button
+        kParamBloom,                      // 20  — bridge cross-coupling between strings
         kNumParams
     };
+
+    // Absolute cap on bridge-bus coupling. With the bridge DC blocker in
+    // place, the cross-coupled-comb system is mathematically stable for
+    // bloomCoupling < N · (1 - fb), so we tie the effective coupling to the
+    // current per-string feedback at runtime (see run()) and additionally
+    // cap it so a low-Decay setting doesn't produce an absurdly hot bloom
+    // path. tanh is kept as a microsecond backstop; with the DC blocker and
+    // the stability-tied scaling it almost never engages.
+    static constexpr float kBloomCouplingCap = 0.4f;
+
+    // One-pole HPF pole for the bridge DC blocker. alpha = 0.996 puts the
+    // -3 dB cutoff at ~30 Hz at 48 kHz — just below the lowest piano string
+    // (A0 = 27.5 Hz), so it removes DC and sub-rumble without touching the
+    // audible bass register.
+    static constexpr float kBridgeDcAlpha = 0.996f;
 
     SitarPlugin()
         : Plugin(kNumParams, 0, 0)
@@ -133,6 +149,7 @@ public:
         fDecay     = 0.5f;
         fMix       = 0.5f;
         fJawari    = 0.0f;
+        fBloom     = 0.0f;
         fScaleIdx  = 0;   // Major
         fRootIdx   = 0;   // C2
 
@@ -281,6 +298,15 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
+
+        case kParamBloom:
+            parameter.hints      = kParameterIsAutomatable;
+            parameter.name       = "Bloom";
+            parameter.symbol     = "bloom";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -298,6 +324,7 @@ protected:
         case kParamScale:    return static_cast<float>(fScaleIdx);
         case kParamRootNote: return static_cast<float>(fRootIdx);
         case kParamAudition: return fAuditionActive ? 1.0f : 0.0f;
+        case kParamBloom:    return fBloom;
         }
         return 0.0f;
     }
@@ -382,6 +409,8 @@ protected:
                 fAuditionSampleCount = 0;
                 for (uint32_t i = 0; i < kNumStrings; ++i)
                     fCombs[i].clear();
+                fBridgeState = 0.0f;
+                fBridgeDcX   = 0.0f;
             }
             else if (!wantActive && fAuditionActive)
             {
@@ -389,6 +418,11 @@ protected:
             }
             break;
         }
+        case kParamBloom:
+            if (value < 0.0f) value = 0.0f;
+            if (value > 1.0f) value = 1.0f;
+            fBloom = value;
+            break;
         }
     }
 
@@ -398,6 +432,8 @@ protected:
     {
         for (uint32_t i = 0; i < kNumStrings; ++i)
             fCombs[i].clear();
+        fBridgeState = 0.0f;
+        fBridgeDcX   = 0.0f;
     }
 
     void sampleRateChanged(double newSampleRate) override
@@ -432,6 +468,33 @@ protected:
         const float makeUp  = 1.0f / std::tanh(drive);
 
         constexpr float kStringNorm = 1.0f / 6.0f;
+
+        // Bridge-bus coupling: every active string contributes to a shared
+        // bridge signal that's fed back into every string's input next sample,
+        // mirroring how a real sitar's tarafs share one physical bridge.
+        //
+        // Stability: a feedback comb has resonance peaks at *every* integer
+        // multiple of its tuned frequency, so K ≈ 2–4 strings typically
+        // respond at any given input pitch (octave doublets, harmonic
+        // overlaps). The cross-coupled system is bounded for
+        // bloomCoupling < N · (1 - fb) / K, and beyond that the wet-sum
+        // tanh limiter catches any saturation. We pick coeff = 0.3 here so
+        // the closed-loop boost is ~1.4× at K=1 and ~2.5× at K=2 (the most
+        // common case) — clearly audible cross-coupling halo. K=4+ overlaps
+        // saturate into the limiter rather than running away.
+        const float stableMax = 0.3f
+            * static_cast<float>(kNumStrings)
+            * (1.0f - fFeedback);
+        const float bloomCouplingMax = stableMax < kBloomCouplingCap
+            ? stableMax : kBloomCouplingCap;
+        const float bloomCoupling = fBloom * bloomCouplingMax;
+
+        uint32_t activeCount = 0;
+        for (uint32_t s = 0; s < kNumStrings; ++s)
+            if (fStringActive[s]) ++activeCount;
+        const float bridgeNorm = activeCount > 0
+            ? 1.0f / static_cast<float>(activeCount)
+            : 0.0f;
 
         for (uint32_t f = 0; f < frames; ++f)
         {
@@ -470,6 +533,10 @@ protected:
                 wetL *= kStringNorm;
                 wetR *= kStringNorm;
 
+                // Same permanent soft-clipper as normal mode.
+                wetL = std::tanh(wetL);
+                wetR = std::tanh(wetR);
+
                 if (jawari > 0.0f)
                 {
                     wetL = std::tanh(wetL * drive) * makeUp;
@@ -496,18 +563,46 @@ protected:
             }
 
             // ----- Normal mode -----
+            const float bloomInput = (bloomCoupling > 0.0f)
+                ? std::tanh(bloomCoupling * fBridgeState)
+                : 0.0f;
+            const float stringInput = x + bloomInput;
+
+            float bridgeAcc = 0.0f;
             for (uint32_t s = 0; s < kNumStrings; ++s)
             {
-                const float v = fCombs[s].process(x);
+                const float v = fCombs[s].process(stringInput);
                 if (fStringActive[s])
                 {
                     wetL += v * fPanL[s];
                     wetR += v * fPanR[s];
+                    bridgeAcc += v;
                 }
             }
 
+            // One-pole DC blocker on the bridge bus (cutoff ~30 Hz at 48 kHz).
+            // Every comb has gain 1/(1-fb) at DC and all 13 strings respond
+            // identically to DC, so without this the cross-coupled DC mode
+            // would go unstable for any non-trivial bloom, silently pushing
+            // the strings into a saturated DC state until the audible AC
+            // content collapses to zero.
+            //   y[n] = x[n] - x[n-1] + alpha * y[n-1]
+            const float bridgeRaw = bridgeAcc * bridgeNorm;
+            fBridgeState = bridgeRaw - fBridgeDcX + kBridgeDcAlpha * fBridgeState;
+            fBridgeDcX   = bridgeRaw;
+
             wetL *= kStringNorm;
             wetR *= kStringNorm;
+
+            // Permanent safety soft-clipper. Each comb's resonance peak gain
+            // is 1/(1-fb), which can reach ~333× at max Decay; sustained
+            // input near a string's resonance would otherwise drive the wet
+            // sum well past ±1 and overflow the host's audio bus. tanh is
+            // transparent at typical play levels (~6 % drop at wet = 0.5)
+            // and hard-bounds the output to ±1 absolutely. Jawari adds a
+            // further drive stage on top for the characteristic sitar buzz.
+            wetL = std::tanh(wetL);
+            wetR = std::tanh(wetR);
 
             if (jawari > 0.0f)
             {
@@ -608,10 +703,16 @@ private:
         //   decay = 0.7  -> fb = 0.9998  (many seconds, sympathetic-feel)
         //   decay = 0.9  -> fb ≈ 1       (drone)
         //   decay = 1.0  -> fb clamped to 0.99999 (near-infinite)
-        const float om  = 1.0f - fDecay;
-        const float om2 = om * om;
-        const float om4 = om2 * om2;
-        const float fb  = 1.0f - om * om2 * om4;        // = 1 - (1-decay)^7
+        // Exponential approach to a hard cap of 0.998. The previous
+        // (1-decay)^7 curve was useful at the bottom of the knob but pushed
+        // fb to ~0.99999 at the top, which gives 100,000×+ resonance gain
+        // and minute-scale ring times — sustained input near one of the
+        // 13 resonances would just integrate upward forever, sounding like
+        // runaway. The exp curve still ramps fast through the lower half
+        // (fb ≈ 0.97 at decay=0.5) but levels off below 0.998 (max ring
+        // ~2.5 s at the lowest string, max gain ~333×, which the wet-output
+        // tanh in run() can soft-clip safely).
+        const float fb   = 0.998f * (1.0f - std::exp(-7.0f * fDecay));
         // Damping (1-pole LPF coeff inside the loop). Kept fairly close to
         // 1.0 even at short decays so the high-frequency loss doesn't smother
         // the ring before feedback alone has a chance to decay it.
@@ -621,6 +722,9 @@ private:
             fCombs[i].setFeedback(fb);
             fCombs[i].setDamping(damp);
         }
+        // Cache the effective feedback so run() can derive a stable bloom
+        // coupling from it (the CombFilter clamps to <= 0.99999 internally).
+        fFeedback = fb < 0.99999f ? fb : 0.99999f;
     }
 
     // Pre-baked equal-power pan coefficients for each string.
@@ -662,6 +766,19 @@ private:
     float fDecay  = 0.85f;
     float fMix    = 0.5f;
     float fJawari = 0.0f;
+    float fBloom  = 0.0f;
+
+    // Shared bridge-bus state, one sample delayed and DC-blocked. Holds the
+    // HPF'd average of all active strings' outputs from the previous sample;
+    // bloomCoupling * tanh() of this is mixed into every string's input
+    // next sample.
+    float fBridgeState = 0.0f;
+    // Previous bridge-raw value for the one-pole DC blocker.
+    float fBridgeDcX   = 0.0f;
+
+    // Cached comb-filter feedback coefficient, set in applyDecay(). Used by
+    // run() to derive the stable bloom-coupling max for the current Decay.
+    float fFeedback = 0.0f;
 
     uint32_t fScaleIdx = 0;
     uint32_t fRootIdx  = 0;
