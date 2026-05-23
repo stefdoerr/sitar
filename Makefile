@@ -71,7 +71,7 @@ install: all
 # bakes in the mod-plugin-builder cross-toolchain (aarch64, glibc 2.27,
 # gcc 9.4.0 — matching Dwarf firmware). First `make dwarf-image` is slow
 # (~30-60 min, one-time per machine). After that, `make dwarf-build` is
-# ~10s and produces bin/dwarf/sitar.lv2 ready to scp.
+# ~10s and produces build/dwarf/sitar.lv2 ready to scp.
 #
 # Override on the command line as needed, e.g.
 #   make dwarf-deploy DWARF_HOST=sitar.local DWARF_USER=admin
@@ -80,7 +80,7 @@ DWARF_HOST   ?= 192.168.51.1
 DWARF_USER   ?= root
 DWARF_LV2DIR ?= /root/.lv2
 
-DWARF_BUNDLE := bin/dwarf/sitar.lv2
+DWARF_BUNDLE := build/dwarf/sitar.lv2
 
 # 1. Build the cross-toolchain image. One-time, ~30-60 min, cached forever.
 dwarf-image:
@@ -88,28 +88,39 @@ dwarf-image:
 
 # 2. Cross-build the plugin. Runs build-sitar.sh inside the image, which
 #    does a native build for .ttl/modgui assets and a cross-build for the
-#    aarch64 .so, dropping the assembled bundle into bin/dwarf/sitar.lv2.
+#    aarch64 .so, dropping the assembled bundle into build/dwarf/sitar.lv2.
 dwarf-build:
 	@if ! docker image inspect $(SITAR_IMAGE) >/dev/null 2>&1; then \
 		echo "==> $(SITAR_IMAGE) image not built yet — building (~30-60 min, one-time)"; \
 		$(MAKE) dwarf-image; \
 	fi
-	@mkdir -p bin/dwarf
+	@mkdir -p build/dwarf
 	docker run --rm \
 		-e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g) \
 		-v "$(CURDIR):/src:ro" \
-		-v "$(CURDIR)/bin/dwarf:/out" \
+		-v "$(CURDIR)/build/dwarf:/out" \
 		$(SITAR_IMAGE) \
 		bash /src/mod-build/build-sitar.sh
 
 # 3. Push the bundle to a connected Dwarf via scp. The Dwarf's `/root/.lv2/`
 #    is the per-user plugin dir and survives firmware updates.
+#
+# Note `-O`: the Dwarf runs Dropbear SSH, which has no SFTP subsystem.
+# Modern OpenSSH scp (>= 9.0) defaults to SFTP and fails with "subsystem
+# request failed on channel 0". `-O` forces the legacy scp protocol.
 dwarf-deploy:
 	@if [ ! -d "$(DWARF_BUNDLE)" ]; then \
 		echo "error: no bundle at $(DWARF_BUNDLE) — run 'make dwarf-build' first."; \
 		exit 1; \
 	fi
-	scp -r "$(DWARF_BUNDLE)" "$(DWARF_USER)@$(DWARF_HOST):$(DWARF_LV2DIR)/"
+	scp -O -r "$(DWARF_BUNDLE)" "$(DWARF_USER)@$(DWARF_HOST):$(DWARF_LV2DIR)/"
+	@echo "==> Restarting jack2 so the new bundle is picked up"
+	@# jack2 hosts mod-host internally (visible in logs as 'mod-jackd'),
+	@# and it caches the lilv plugin world at startup. Restarting mod-ui
+	@# alone is NOT enough — the UI sees the new plugin but jack2 still
+	@# can't instantiate it ("can't get plugin" in journalctl).
+	@# Audio drops for ~1-2s while jack2 comes back.
+	ssh "$(DWARF_USER)@$(DWARF_HOST)" 'systemctl restart jack2'
 
 # Convenience: build then deploy.
 dwarf: dwarf-build dwarf-deploy
