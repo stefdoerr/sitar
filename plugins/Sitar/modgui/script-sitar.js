@@ -29,10 +29,12 @@ function (event, funcs) {
     ];
 
     // Same order as kRootHz[] in SitarPlugin.cpp. Values are the Hz strings
-    // used as the <option value="..."> for the root dropdown.
+    // used as the <option value="..."> for the root dropdown. The Hz values
+    // are pitch classes in the reference octave (C3=130.81 ... B3=246.94);
+    // the OCT knob in the plugin chooses the absolute octave.
     var ROOT_VALUES = [
-        '65.41', '69.30', '73.42', '77.78', '82.41', '87.31',
-        '92.50', '98.00', '103.83', '110.00', '116.54', '123.47'
+        '130.81', '138.59', '146.83', '155.56', '164.81', '174.61',
+        '185.00', '196.00', '207.65', '220.00', '233.08', '246.94'
     ];
 
     function scaleKeyToIndex(key) {

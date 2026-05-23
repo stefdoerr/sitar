@@ -20,7 +20,7 @@
    without needing overflow:hidden. */
 .sitar-pedal {
     width: 640px;
-    height: 220px;
+    height: 320px;
     position: absolute;
     border-radius: 14px;
     background:
