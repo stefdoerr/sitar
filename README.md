@@ -1,26 +1,32 @@
 # Sympathetic Sitar
 
 A sympathetic-resonance LV2 plugin for [MOD](https://mod.audio) devices
-(MOD Dwarf, MOD Desktop) and any standard LV2 host. Drives 13 tuned
-feedback comb-filter strings from the input signal to produce sitar-like
-ringing, microtonal accompaniment — the same idea as a real sitar's
-*taraf* (sympathetic strings beneath the frets).
+(MOD Dwarf, MOD Desktop) and any standard LV2 host. Drives up to 48
+tuned feedback comb-filter strings from the input signal to produce
+sitar-like ringing, microtonal accompaniment — the same idea as a real
+sitar's *taraf* (sympathetic strings beneath the frets).
 
 ![Pedalboard rendering of the Sympathetic Sitar plugin](plugins/Sitar/modgui/screenshot-sitar.png)
 
 ## What it does
 
-Send a guitar, synth, voice, or anything else through the plugin. Each of
-the 13 internal "strings" is a tuned resonator that rings whenever the
-input has energy at (or near) the string's frequency or one of its
-harmonics. The result is a shimmering, slowly-decaying halo of pitched
-overtones that follow whatever you play, harmonized against the scale you
-pick.
+Send a guitar, synth, voice, or anything else through the plugin. Each
+internal "string" is a tuned resonator that rings whenever the input has
+energy at (or near) the string's frequency or one of its harmonics. The
+result is a shimmering, slowly-decaying halo of pitched overtones that
+follow whatever you play, harmonized against the scale you pick. The
+48-string bank spans roughly four octaves above the root — wide enough
+to cover a bass clarinet's range — and `N STRINGS` cursors over how many
+of them ring at once.
 
 ### Features
 
-* **13 sympathetic strings**, each one a comb-filter resonator with
-  fractional-delay tuning + per-string damping
+* **Up to 48 sympathetic strings**, each one a comb-filter resonator with
+  fractional-delay tuning, per-string damping, and an in-loop tanh
+  saturator so a single string can't dominate when its resonance
+  frequency is excited
+* **N STRINGS** knob (1–48) — picks how many strings ring at once,
+  starting from the root upward through the scale
 * **Scale + Root selectors** (LV2 enum parameters — also appear in the
   cogwheel settings of any LV2 host)
   * 14 Western scales (major / minor / modes / pentatonics / blues /
@@ -28,21 +34,47 @@ pick.
   * 4 Turkish makams (Rast, Uşşak, Hicaz, Saba) with proper neutral
     intervals (11-limit + 13-limit Just intonation)
   * 6 Hindustani ragas (Yaman, Bhairav, Bhairavi, Todi, Marwa, Malkauns)
-* **Octave knob** (-1 to +3) that non-destructively transposes all 13
-  strings. Strings that fall outside the piano range are muted, not
-  clipped — moving the knob back unclips them losslessly.
-* **Decay** with a perceptually-linear curve (knob travel ≈ change in
-  ring time)
+* **Root** as a pitch class (C / C# / D / … / B) — paired with the OCT
+  knob it covers C2 through C8
+* **OCT** (2–6) — absolute octave for the root pitch class. Default 3
+  puts the root at C3 (≈131 Hz); higher octaves leave only upper
+  harmonics of the input to excite the strings, for shimmer-only effects.
+* **13 fine-tune knobs** for the first 13 populated string slots — edit
+  them to detune individual strings; SCALE / ROOT / OCT changes recompute
+  from scratch.
+* **Decay** with a curve that pushes the audible sustain range into the
+  lower half of the knob (knob travel ≈ change in ring time). Capped at
+  fb = 0.998 to prevent infinite resonance build-up.
 * **Bloom** — shared bridge-bus cross-coupling: every active string is fed
-  a small fraction of the others' output through a DC-blocked, tanh-saturated
-  bus, mirroring how a real sitar's *tarafs* share one physical bridge and
-  excite each other. Adds a subtle ring extension and harmonic shimmer;
-  deliberately scaled to stay stable across all Scale × Decay combinations.
+  a small fraction of the others' output through a DC-blocked,
+  tanh-saturated bus, mirroring how a real sitar's *tarafs* share one
+  physical bridge and excite each other. Adds a subtle ring extension
+  and harmonic shimmer; coupling is scaled by the active string count to
+  stay stable across all Scale × Decay × N STRINGS combinations.
 * **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
-  buzz of a real sitar's *jawari* bridge
-* **Mix** — dry/wet blend
-* **Test Scale** button — plucks each string in turn for 2 seconds so you
-  can hear the tuning without needing to play anything
+  buzz of a real sitar's *jawari* bridge. Followed by a ~3.5 kHz
+  one-pole tilt-down LPF (auto-engaged when JAWARI > 0) that tames the
+  brittle top-end harmonics the saturator generates.
+* **Mix** — equal-power dry/wet crossfade (`dry·cos(mix·π/2) +
+  wet·sin(mix·π/2)`) so the output stays at roughly constant power
+  across the knob.
+* **Level** — output trim, ±12 dB, applied post-mix to the L/R bus.
+  For the last bit of input↔output matching by ear.
+* **Sens** (sensitivity) — input trim into the comb bank, 0..1. Lower
+  values cause strings to excite more slowly and quietly at any given
+  input level. Sits between the noise gate and the strings.
+* **Gate** — input noise gate. Peak-envelope follower with instant
+  attack / 80 ms release; mutes only the signal feeding the combs, so
+  existing rings keep decaying at the user-set rate. Knob 0..10 maps
+  internally to a linear-amplitude threshold (10 ≈ -34 dBFS).
+* **Stereo** — 5-mode layout: Mono / Linear Narrow / Linear / Wide
+  Narrow / Wide. *Linear* spreads strings monotonically low→left
+  high→right; *Wide* alternates edges-to-centre so adjacent scale
+  degrees end up on opposite sides; *Narrow* variants halve the pan
+  magnitude. Defaults to Wide Narrow.
+* **Test Scale** button — plucks each populated string in turn for
+  ~2 seconds so you can hear the tuning without needing to play anything.
+  Output bypasses dry so only the wet plucks are audible.
 * **MOD pedalboard GUI** — proper drag-handle, brass-knob film-strip,
   audio jack rendering; renders correctly in MOD Desktop and on Dwarf
   hardware
@@ -116,22 +148,42 @@ on the next scan.
 
 * The plugin is a *resonator*, not a generator: it needs audio in to ring.
   Pluck a guitar, hum into a mic, or feed a synth into it.
+* **N STRINGS** at 13 (default) covers a single octave of a 7-note scale
+  or two octaves of a pentatonic. Push to 28+ for the full bass-clarinet
+  span, or drop to 4-7 for a sparse tambura-style drone.
+* **OCT** at 3 (default) puts the root at C3-ish; OCT 5–6 leaves only the
+  upper harmonics of bassy input to excite the strings, for "shimmer
+  only" effects with no muddy fundamentals.
 * **Decay** below 0.3 is for percussive plucks; 0.5–0.7 for natural
   sympathetic feel; 0.9+ becomes a sustained drone.
 * **Bloom** at 0 is fully independent strings (input-driven only).
-  Around 0.3–0.6 adds a subtle ring extension as strings nudge each other
-  through the shared bridge; at the top of the knob you get a ~2× boost
-  to sustained resonance. Bloom is deliberately conservative — full
-  cross-coupling at high Decay would run away into self-oscillation
+  Around 0.3–0.6 adds a subtle ring extension as strings nudge each
+  other through the shared bridge; at the top of the knob you get a ~2×
+  boost to sustained resonance. Bloom is deliberately conservative —
+  full cross-coupling at high Decay would run away into self-oscillation
   because feedback combs have resonance peaks at every harmonic of their
   tuned frequency, so multiple strings line up at the same pitch. The
   current setting trades drone-like wash for predictable stability.
-* The default **Mix** is 0.5 (dry + wet). For a pure sympathetic effect
-  put it in a parallel chain at Mix = 1.0 and blend manually.
-* **Test Scale** sequences all 13 strings as a 26-second pluck pattern, so
-  you can audibly verify scale and root before playing.
-* For sitar-authentic feel, try **Raga Yaman** with root **A2** and
-  **Jawari ≈ 0.3** with a clean guitar input.
+* The default **Mix** is 0.5 (dry + wet, equal-power). For a pure
+  sympathetic effect put it in a parallel chain at Mix = 1.0 and blend
+  manually.
+* **Sens** lower (≈ 0.3–0.6) is the cure if singing the root note (or any
+  scale pitch) makes a single string dominate. The per-string limiter
+  already caps absolute amplitude, but lowering Sens slows the build-up.
+* **Level** (±12 dB) is the last bit of input↔output matching. After
+  setting Mix and Sens, dial Level by ear so plugin-on and plugin-off
+  feel the same volume.
+* **Gate** at 0 disables the gate (good for studio-clean signals); 1.0
+  (default) catches typical mic / guitar noise floors. Push higher if
+  your input is genuinely noisy.
+* **Stereo** at *Wide Narrow* (default) is the safe musical choice. *Wide*
+  is the most theatrical (adjacent scale degrees on opposite sides);
+  *Mono* is right for a single-speaker live rig.
+* **Test Scale** sequences every populated string as a ~2-second pluck
+  pattern (so 13 strings = ~26 s, 28 strings = ~56 s), so you can audibly
+  verify scale × root × OCT before playing.
+* For sitar-authentic feel, try **Raga Yaman** with root **A**, **OCT 2**,
+  and **Jawari ≈ 0.3** with a clean guitar input.
 
 ## Project layout
 
@@ -140,17 +192,37 @@ on the next scan.
 ├── plugins/Sitar/             — the DPF plugin (C++ DSP + modgui)
 │   ├── SitarPlugin.cpp        — main DSP, scale tables, audition
 │   ├── CombFilter.hpp         — fractional-delay feedback comb filter
-│   ├── DistrhoPluginInfo.h    — DPF plugin metadata
+│   │                            with in-loop tanh saturator
+│   ├── DistrhoPluginInfo.h    — DPF plugin metadata; conditional
+│   │                            stable / beta identity via SITAR_BETA
 │   ├── modgui/                — MOD pedalboard GUI (HTML/CSS/JS/sprite)
 │   ├── modgui.ttl             — MOD GUI declaration
-│   └── Makefile               — DPF build glue
+│   └── Makefile               — DPF build glue (BETA=1 retags here)
 ├── dpf/                       — DISTRHO Plugin Framework (git submodule)
-├── mod-build/                 — Cross-compile recipe for MOD Dwarf
-│   ├── sitar.mk               — mod-plugin-builder package recipe
+├── mod-build/                 — Self-contained Dwarf cross-build setup
+│   ├── Dockerfile             — vendored mod-plugin-builder Dockerfile,
+│   │                            inline aarch64 toolchain build
+│   ├── build-sitar.sh         — runs inside the container; rsyncs source,
+│   │                            does the host TTL pass + aarch64 .so build
 │   └── README.md              — Dwarf cross-build walkthrough
-├── Makefile                   — top-level build + install + Dwarf targets
+├── Makefile                   — top-level build + install + Dwarf targets;
+│                                BETA=1 builds the side-by-side beta bundle
 └── install.sh                 — convenience installer for MOD Desktop
+                                 (BETA=1 to install sitar-beta.lv2)
 ```
+
+### Side-by-side beta builds
+
+For A/B testing, the same source can be built as a second plugin with a
+distinct URI / brand / unique-id by setting `BETA=1`:
+
+```bash
+make beta                                    # builds bin/sitar-beta.lv2
+MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins BETA=1 ./install.sh
+```
+
+The beta and stable bundles can co-exist on the same host; the beta
+shows up as **"Sitar (Beta)"** under brand **"sitar-beta"**.
 
 ## License
 
