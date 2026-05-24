@@ -4,10 +4,9 @@
  * Up to 48 parallel tuned feedback comb filters with fractional delay,
  * a soft-clip "jawari" saturation on the summed wet signal,
  * and an L/R spread for the stereo output bus. The 48 strings span
- * (almost) 4 octaves above the root — wide enough to cover a bass
- * clarinet's playable range. For scales with fewer than 12 notes per
- * octave, only the first 4·notesPerOctave string slots are populated;
- * the remaining slots get freq = 0 and are silent.
+ * (almost) 4 octaves above the root. For scales with fewer than 12
+ * notes per octave, only the first 4·notesPerOctave string slots are
+ * populated; the remaining slots get freq = 0 and are silent.
  *
  * The user-facing UI surfaces two cursor knobs into this 48-string set:
  *   - NUM  STRINGS: how many strings ring simultaneously (1-48)
@@ -937,8 +936,8 @@ private:
     /**
        Recompute every string_N frequency from the current scale + root.
        The first 4·notesPerOctave slots get scale-anchored frequencies (root
-       in octave 0 through degree n-1 in octave 3, i.e. roughly the bass
-       clarinet range, 4 octaves up). Any remaining slots get freq = 0 and
+       in octave 0 through degree n-1 in octave 3, i.e. 4 octaves up from
+       the root). Any remaining slots get freq = 0 and
        are marked inactive — that's how a sparser scale (e.g. pentatonic with
        20 populated slots) tells the wet sum and the bloom bus to skip them.
 

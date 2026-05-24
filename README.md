@@ -15,9 +15,8 @@ internal "string" is a tuned resonator that rings whenever the input has
 energy at (or near) the string's frequency or one of its harmonics. The
 result is a shimmering, slowly-decaying halo of pitched overtones that
 follow whatever you play, harmonized against the scale you pick. The
-48-string bank spans roughly four octaves above the root — wide enough
-to cover a bass clarinet's range — and `N STRINGS` cursors over how many
-of them ring at once.
+48-string bank spans roughly four octaves above the root, and
+`N STRINGS` cursors over how many of them ring at once.
 
 ### Features
 
@@ -149,7 +148,7 @@ on the next scan.
 * The plugin is a *resonator*, not a generator: it needs audio in to ring.
   Pluck a guitar, hum into a mic, or feed a synth into it.
 * **N STRINGS** at 13 (default) covers a single octave of a 7-note scale
-  or two octaves of a pentatonic. Push to 28+ for the full bass-clarinet
+  or two octaves of a pentatonic. Push to 28+ for the full 4-octave
   span, or drop to 4-7 for a sparse tambura-style drone.
 * **OCT** at 3 (default) puts the root at C3-ish; OCT 5–6 leaves only the
   upper harmonics of bassy input to excite the strings, for "shimmer
