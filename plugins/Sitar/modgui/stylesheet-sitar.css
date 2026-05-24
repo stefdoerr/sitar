@@ -246,10 +246,11 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* 7 knobs (GATE / N STRINGS / OCT / DECAY / BLOOM / JAWARI / MIX) in
-       640 px, each ~56 px wide; gap tightened so the row stays centred
-       without butting up to the audio-jack rails. */
-    gap: 18px;
+    /* 9 knobs (GATE / SENS / N STRINGS / OCT / DECAY / BLOOM / JAWARI / MIX
+       / LEVEL) in 640 px, each 56 px wide. 9×56 + 8×gap must fit inside
+       the pedal frame without touching the audio-jack rails; gap = 8 px
+       yields 9·56 + 8·8 = 568 px → ~36 px clearance per side. */
+    gap: 8px;
 }
 .sitar-pedal .sitar-knob-tone {
     display: flex;

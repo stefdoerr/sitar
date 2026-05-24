@@ -90,7 +90,16 @@ public:
         // One-pole damping inside the loop.
         fLastOut = fDamping * delayed + (1.0f - fDamping) * fLastOut;
 
-        const float fbSample = fLastOut * fFeedback;
+        // tanh saturator inside the feedback loop. Without this, a sustained
+        // input on the comb's resonance frequency drives the buffer to
+        // input / (1 - fb), which is ~125× at default DECAY and ~500× at
+        // max — single-string runaway when the user happens to hit the right
+        // pitch. tanh caps the recirculated sample at ±1, so the comb's
+        // steady-state amplitude is bounded by ~1 + |input| regardless of
+        // feedback gain. Models the physical limit of a real sympathetic
+        // string (bridge slap / friction). Linear for small signals so
+        // typical play levels pass through unmodified.
+        const float fbSample = std::tanh(fLastOut * fFeedback);
         fBuffer[fWritePos] = input + fbSample;
 
         fWritePos = (fWritePos + 1) % fBufferSize;

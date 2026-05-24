@@ -95,5 +95,11 @@
         ] , [
             lv2:symbol "gate" ;
             lv2:name "Gate"
+        ] , [
+            lv2:symbol "level" ;
+            lv2:name "Level"
+        ] , [
+            lv2:symbol "sensitivity" ;
+            lv2:name "Sensitivity"
         ]
     ] .

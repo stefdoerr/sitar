@@ -181,6 +181,8 @@ public:
         kParamBloom,                          // 56 — bridge cross-coupling between strings
         kParamStereoMode,                     // 57 — enum, stereo layout (see kStereoModes[])
         kParamGate,                           // 58 — input noise gate threshold (0 = off)
+        kParamLevel,                          // 59 — output trim in dB (±12), post-mix
+        kParamSensitivity,                    // 60 — input-trim into comb bank (0..1)
         kNumParams
     };
 
@@ -206,6 +208,8 @@ public:
         fOctave       = kOctaveRef;  // default = octave 3 (C3 if root=C)
         fStereoMode   = 3;           // Wide Narrow — gentle spread, no hard-pan one-sided ringing
         fGateThreshold = 1.0f;       // light gate by default (~ -54 dBFS threshold)
+        fLevel        = 0.0f;        // 0 dB — output trim disabled by default
+        fSensitivity  = 1.0f;        // strings fully responsive by default
         fDecay        = 0.5f;
         fMix          = 0.5f;
         fJawari       = 0.0f;
@@ -398,6 +402,38 @@ protected:
             parameter.ranges.def = 1.0f;   // light default — tames noise floor without cutting playing
             break;
 
+        case kParamLevel:
+            // Output trim, applied AFTER the equal-power dry/wet crossfade.
+            // ±12 dB matches standard reverb-pedal output trims (Strymon,
+            // Boss). With the equal-power mix law the wet+dry combine to
+            // ~unity for decorrelated signals, so this knob exists for the
+            // last bit of input→output matching by ear.
+            parameter.hints      = kParameterIsAutomatable;
+            parameter.name       = "Level";
+            parameter.symbol     = "level";
+            parameter.unit       = "dB";
+            parameter.ranges.min = -12.0f;
+            parameter.ranges.max =  12.0f;
+            parameter.ranges.def =   0.0f;
+            break;
+
+        case kParamSensitivity:
+            // How strongly the input excites the strings. Sits between
+            // the noise gate and the comb bank in the signal flow. The
+            // per-string tanh limiter in CombFilter caps each string's
+            // steady-state amplitude near ±1 regardless of feedback, so
+            // SENSITIVITY mostly controls how fast resonance builds and
+            // how prominent the wet bus feels — not absolute headroom.
+            // 0 = no signal reaches the strings (effect bypassed at
+            // source), 1 = full input.
+            parameter.hints      = kParameterIsAutomatable;
+            parameter.name       = "Sensitivity";
+            parameter.symbol     = "sensitivity";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 1.0f;
+            break;
+
         case kParamStereoMode:
         {
             parameter.hints      = kParameterIsAutomatable | kParameterIsInteger;
@@ -438,6 +474,8 @@ protected:
         case kParamBloom:        return fBloom;
         case kParamStereoMode:   return static_cast<float>(fStereoMode);
         case kParamGate:         return fGateThreshold;
+        case kParamLevel:        return fLevel;
+        case kParamSensitivity:  return fSensitivity;
         }
         return 0.0f;
     }
@@ -567,6 +605,16 @@ protected:
             if (value > 10.0f) value = 10.0f;
             fGateThreshold = value;
             break;
+        case kParamLevel:
+            if (value < -12.0f) value = -12.0f;
+            if (value >  12.0f) value =  12.0f;
+            fLevel = value;
+            break;
+        case kParamSensitivity:
+            if (value < 0.0f) value = 0.0f;
+            if (value > 1.0f) value = 1.0f;
+            fSensitivity = value;
+            break;
         }
     }
 
@@ -620,10 +668,22 @@ protected:
         /* */ float* const outL = outputs[0];
         /* */ float* const outR = outputs[1];
 
+        // Equal-power crossfade between dry input and wet resonance bus:
+        //   mix = 0   -> dryGain = 1,     wetGain = 0       (all dry)
+        //   mix = 0.5 -> dryGain = √½,    wetGain = √½      (-3 dB each)
+        //   mix = 1   -> dryGain = 0,     wetGain = 1       (all wet)
+        // Sum of squares is constant (cos² + sin² = 1), so for decorrelated
+        // dry vs. wet the output power stays flat across the knob — the
+        // standard reverb-pedal mix law. Replaces the earlier linear
+        // (1-mix)/mix law which summed two full-amplitude signals at the
+        // centre and pushed the output ~6-9 dB hot.
         const float mix     = fMix;
-        const float dryGain = 1.0f - mix;
-        const float wetGain = mix;
+        const float dryGain = std::cos(mix * kHalfPi);
+        const float wetGain = std::sin(mix * kHalfPi);
         const float jawari  = fJawari;
+        // Output trim: dB knob → linear scalar applied to the final stereo
+        // bus. 10^(dB/20) is the standard amplitude conversion.
+        const float levelLin = std::pow(10.0f, fLevel * (1.0f / 20.0f));
 
         // Jawari drive: 1x to 8x gain into a tanh saturator. Make-up keeps output level roughly steady.
         const float drive   = 1.0f + jawari * 7.0f;
@@ -725,8 +785,10 @@ protected:
                 }
 
                 // Output wet only — pass-through dry would confuse the test.
-                outL[f] = wetL;
-                outR[f] = wetR;
+                // Level trim applies in audition too, so a user dialling the
+                // pedal to unity hears the same amplitude during testing.
+                outL[f] = wetL * levelLin;
+                outR[f] = wetR * levelLin;
 
                 // Advance the phase / auto-stop at the end of the sequence.
                 // We only walk through the strings that are scale-populated
@@ -788,7 +850,11 @@ protected:
             const float bloomInput = (bloomCoupling > 0.0f)
                 ? std::tanh(bloomCoupling * fBridgeState)
                 : 0.0f;
-            const float stringInput = gatedX + bloomInput;
+            // Sensitivity attenuates BOTH dry excitation and the bloom
+            // cross-coupled feedback into each string. Keeping bloom inside
+            // the trim means a low-sensitivity setting also reins in the
+            // halo, so the wet bus stays consistent as the user dials it.
+            const float stringInput = (gatedX + bloomInput) * fSensitivity;
 
             // Skip inactive combs entirely — saves ~98% of comb math when
             // NUM is low. Inactive combs get cleared in applyScaleAndRoot
@@ -843,8 +909,8 @@ protected:
                 wetR = fJawariLpfR;
             }
 
-            outL[f] = dryGain * x + wetGain * wetL;
-            outR[f] = dryGain * x + wetGain * wetR;
+            outL[f] = (dryGain * x + wetGain * wetL) * levelLin;
+            outR[f] = (dryGain * x + wetGain * wetR) * levelLin;
         }
     }
 
@@ -1057,6 +1123,17 @@ private:
     float fGateOpen         = 1.0f;
     float fGateReleaseCoef  = 0.0f;
     float fGateSmoothCoef   = 0.0f;
+
+    // Output trim in dB, ±12. Applied to the final L/R bus after the
+    // dry/wet crossfade. Stored as the user-facing dB value; converted to
+    // linear amplitude per-block in run().
+    float fLevel            = 0.0f;
+
+    // Input trim into the comb bank, 0..1. Multiplies (gated input +
+    // bloom) before it reaches the strings. Combined with the per-string
+    // tanh limiter, lower sensitivity = slower / quieter resonance
+    // build-up at any given input level.
+    float fSensitivity      = 1.0f;
 
     // One-pole LPF state for the post-jawari tilt-down EQ (per channel).
     float fJawariLpfL    = 0.0f;
