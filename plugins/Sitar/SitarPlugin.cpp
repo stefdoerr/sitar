@@ -153,7 +153,6 @@ public:
         kParamAudition,                       // 55 — boolean, "Test Scale" button
         kParamBloom,                          // 56 — bridge cross-coupling between strings
         kParamStereoWide,                     // 57 — boolean, "wide" alternating-pan mode
-        kParamMeterMode,                      // 58 — boolean, TEST uses impulse (not noise) excitation
         kNumParams
     };
 
@@ -178,7 +177,6 @@ public:
         fNumActive    = 13;          // pick a musical default below 48
         fOctave       = kOctaveRef;  // default = octave 3 (C3 if root=C)
         fStereoWide   = false;       // linear sweep panning by default
-        fMeterMode    = false;       // TEST = noise pluck by default
         fDecay        = 0.5f;
         fMix          = 0.5f;
         fJawari       = 0.0f;
@@ -356,15 +354,6 @@ protected:
             parameter.ranges.max = 1.0f;
             parameter.ranges.def = 0.0f;
             break;
-
-        case kParamMeterMode:
-            parameter.hints      = kParameterIsAutomatable | kParameterIsBoolean;
-            parameter.name       = "Meter Mode";
-            parameter.symbol     = "meter_mode";
-            parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
-            parameter.ranges.def = 0.0f;
-            break;
         }
     }
 
@@ -385,7 +374,6 @@ protected:
         case kParamAudition:     return fAuditionActive ? 1.0f : 0.0f;
         case kParamBloom:        return fBloom;
         case kParamStereoWide:   return fStereoWide ? 1.0f : 0.0f;
-        case kParamMeterMode:    return fMeterMode  ? 1.0f : 0.0f;
         }
         return 0.0f;
     }
@@ -509,9 +497,6 @@ protected:
             }
             break;
         }
-        case kParamMeterMode:
-            fMeterMode = value > 0.5f;
-            break;
         }
     }
 
@@ -601,22 +586,9 @@ protected:
             // ----- Audition mode: noise pluck routed into a single string -----
             if (fAuditionActive)
             {
-                // Excitation: either a noise burst (musical "pluck" feel)
-                // or a 2-sample plateau (deterministic, identical peak ring
-                // across all strings — ideal for level metering / scale
-                // calibration). The plateau spans 2 samples to cancel out
-                // the comb's fractional-delay interpolation: linear interp
-                // between two equal-valued samples gives the same value
-                // for every fractional offset, so the peak read at the
-                // first round trip is exactly the plateau amplitude (1.0)
-                // for any tuning frequency.
+                // Synthesize a brief noise burst into only the active string.
                 float excite = 0.0f;
-                if (fMeterMode)
-                {
-                    if (fAuditionSampleCount < 2)
-                        excite = 1.0f;
-                }
-                else if (fAuditionSampleCount < fAuditionPluckSamples)
+                if (fAuditionSampleCount < fAuditionPluckSamples)
                 {
                     // Linear-congruential PRNG, real-time safe.
                     fNoiseSeed = fNoiseSeed * 1664525u + 1013904223u;
@@ -928,7 +900,6 @@ private:
     uint32_t fNumActive = 13;
     float    fOctave    = 0.0f;
     bool     fStereoWide = false;
-    bool     fMeterMode  = false;
 
     float fDecay  = 0.5f;
     float fMix    = 0.5f;

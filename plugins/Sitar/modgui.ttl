@@ -92,8 +92,5 @@
         ] , [
             lv2:symbol "stereo_wide" ;
             lv2:name "Wide Stereo"
-        ] , [
-            lv2:symbol "meter_mode" ;
-            lv2:name "Meter Mode"
         ]
     ] .
