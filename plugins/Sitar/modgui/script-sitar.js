@@ -37,6 +37,11 @@ function (event, funcs) {
         '185.00', '196.00', '207.65', '220.00', '233.08', '246.94'
     ];
 
+    // Same order as kStereoModes[] in SitarPlugin.cpp.
+    var STEREO_KEYS = [
+        'mono', 'linear-narrow', 'linear', 'wide-narrow', 'wide'
+    ];
+
     function scaleKeyToIndex(key) {
         var idx = SCALE_KEYS.indexOf(key);
         return idx < 0 ? 0 : idx;
@@ -47,10 +52,16 @@ function (event, funcs) {
         return idx < 0 ? 0 : idx;
     }
 
+    function stereoKeyToIndex(key) {
+        var idx = STEREO_KEYS.indexOf(key);
+        return idx < 0 ? 2 : idx; // default = 'linear'
+    }
+
     if (event.type === 'start') {
         var icon = event.icon;
-        var $scale = icon.find('[mod-role="sitar-scale"]');
-        var $root  = icon.find('[mod-role="sitar-root"]');
+        var $scale  = icon.find('[mod-role="sitar-scale"]');
+        var $root   = icon.find('[mod-role="sitar-root"]');
+        var $stereo = icon.find('[mod-role="sitar-stereo"]');
 
         // Suppress re-emitting set_port_value when we update the <select> in
         // response to a 'change' event coming back from the host.
@@ -64,14 +75,18 @@ function (event, funcs) {
             if (icon.data('sitar-suppress-emit')) return;
             funcs.set_port_value('root_note', rootValueToIndex(this.value));
         });
+        $stereo.on('change', function () {
+            if (icon.data('sitar-suppress-emit')) return;
+            funcs.set_port_value('stereo_mode', stereoKeyToIndex(this.value));
+        });
         return;
     }
 
     if (event.type === 'change') {
-        // Sync the dropdowns when scale/root_note change externally (settings
-        // popup, preset recall, automation). Setting <select>.val via jQuery
-        // does NOT fire a 'change' event, so this won't loop back to our
-        // handler, but we set a guard flag anyway to be safe.
+        // Sync the dropdowns when scale/root_note/stereo_mode change externally
+        // (settings popup, preset recall, automation). Setting <select>.val
+        // via jQuery does NOT fire a 'change' event, so this won't loop back
+        // to our handler, but we set a guard flag anyway to be safe.
         var icon = event.icon;
         if (event.symbol === 'scale')
         {
@@ -89,6 +104,15 @@ function (event, funcs) {
             if (idx >= ROOT_VALUES.length) idx = ROOT_VALUES.length - 1;
             icon.data('sitar-suppress-emit', true);
             icon.find('[mod-role="sitar-root"]').val(ROOT_VALUES[idx]);
+            icon.data('sitar-suppress-emit', false);
+        }
+        else if (event.symbol === 'stereo_mode')
+        {
+            var idx = Math.round(event.value) | 0;
+            if (idx < 0) idx = 0;
+            if (idx >= STEREO_KEYS.length) idx = STEREO_KEYS.length - 1;
+            icon.data('sitar-suppress-emit', true);
+            icon.find('[mod-role="sitar-stereo"]').val(STEREO_KEYS[idx]);
             icon.data('sitar-suppress-emit', false);
         }
         return;

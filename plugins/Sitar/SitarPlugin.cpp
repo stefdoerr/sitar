@@ -103,6 +103,33 @@ static constexpr const char* kRootLabels[12] = { "C",  "C#", "D",  "D#", "E",  "
                                                  "F#", "G",  "G#", "A",  "A#", "B" };
 static constexpr uint32_t kNumRootNotes = 12;
 
+// Stereo layouts. The pan formula maps a string's index to a position in
+// [-1, +1] which gets equal-power-encoded into L/R gains. Each entry
+// describes its layout + a width factor that multiplies the position:
+//   - Linear lays out positions monotonically (low→left, high→right)
+//   - Wide alternates: 0→hard-L, 1→hard-R, 2→less-L, 3→less-R, ... pairs
+//     converging toward the centre. Same set of positions either way; only
+//     the index-to-position mapping differs.
+//   - Mono ignores layout: all strings get pan 0 (L=R=√½) so the stereo
+//     bus is a duplicated mono signal. Useful when summing externally or
+//     when a single resonance hard-panned to one side feels too off-axis.
+//   - Narrow variants halve the position magnitude → strings span
+//     [-0.5, +0.5] instead of [-1, +1].
+// Keep the order IN SYNC with STEREO_KEYS in modgui/script-sitar.js.
+struct StereoModeDef {
+    const char* label;
+    enum Layout { Linear, Wide, Mono } layout;
+    float       widthScale;
+};
+static constexpr StereoModeDef kStereoModes[] = {
+    { "Mono",            StereoModeDef::Mono,   0.0f },
+    { "Linear Narrow",   StereoModeDef::Linear, 0.5f },
+    { "Linear",          StereoModeDef::Linear, 1.0f },
+    { "Wide Narrow",     StereoModeDef::Wide,   0.5f },
+    { "Wide",            StereoModeDef::Wide,   1.0f },
+};
+static constexpr uint32_t kNumStereoModes = sizeof(kStereoModes) / sizeof(kStereoModes[0]);
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 class SitarPlugin : public Plugin
@@ -152,7 +179,7 @@ public:
         kParamRootNote,                       // 54 — enum, selects from kRootHz[]
         kParamAudition,                       // 55 — boolean, "Test Scale" button
         kParamBloom,                          // 56 — bridge cross-coupling between strings
-        kParamStereoWide,                     // 57 — boolean, "wide" alternating-pan mode
+        kParamStereoMode,                     // 57 — enum, stereo layout (see kStereoModes[])
         kNumParams
     };
 
@@ -176,7 +203,7 @@ public:
     {
         fNumActive    = 13;          // pick a musical default below 48
         fOctave       = kOctaveRef;  // default = octave 3 (C3 if root=C)
-        fStereoWide   = false;       // linear sweep panning by default
+        fStereoMode   = 2;           // Linear (full) — matches old behaviour
         fDecay        = 0.5f;
         fMix          = 0.5f;
         fJawari       = 0.0f;
@@ -356,14 +383,25 @@ protected:
             parameter.ranges.def = 0.0f;
             break;
 
-        case kParamStereoWide:
-            parameter.hints      = kParameterIsAutomatable | kParameterIsBoolean;
-            parameter.name       = "Wide Stereo";
-            parameter.symbol     = "stereo_wide";
+        case kParamStereoMode:
+        {
+            parameter.hints      = kParameterIsAutomatable | kParameterIsInteger;
+            parameter.name       = "Stereo Mode";
+            parameter.symbol     = "stereo_mode";
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = 1.0f;
-            parameter.ranges.def = 0.0f;
+            parameter.ranges.max = static_cast<float>(kNumStereoModes - 1);
+            parameter.ranges.def = 2.0f;                                       // Linear (full)
+            parameter.enumValues.count          = static_cast<uint8_t>(kNumStereoModes);
+            parameter.enumValues.restrictedMode = true;
+            ParameterEnumerationValue* const ev = new ParameterEnumerationValue[kNumStereoModes];
+            for (uint32_t i = 0; i < kNumStereoModes; ++i)
+            {
+                ev[i].value = static_cast<float>(i);
+                ev[i].label = kStereoModes[i].label;
+            }
+            parameter.enumValues.values = ev;
             break;
+        }
         }
     }
 
@@ -383,7 +421,7 @@ protected:
         case kParamRootNote:     return static_cast<float>(fRootIdx);
         case kParamAudition:     return fAuditionActive ? 1.0f : 0.0f;
         case kParamBloom:        return fBloom;
-        case kParamStereoWide:   return fStereoWide ? 1.0f : 0.0f;
+        case kParamStereoMode:   return static_cast<float>(fStereoMode);
         }
         return 0.0f;
     }
@@ -496,12 +534,13 @@ protected:
             fBloom = value;
             break;
 
-        case kParamStereoWide:
+        case kParamStereoMode:
         {
-            const bool wide = value > 0.5f;
-            if (wide != fStereoWide)
+            uint32_t idx = static_cast<uint32_t>(value + 0.5f);
+            if (idx >= kNumStereoModes) idx = kNumStereoModes - 1;
+            if (idx != fStereoMode)
             {
-                fStereoWide = wide;
+                fStereoMode = idx;
                 // Re-derive the pan table for the new mode.
                 applyScaleAndRoot(/*notifyHost=*/ false);
             }
@@ -774,38 +813,36 @@ private:
         const float     octMul = std::pow(2.0f, fOctave - kOctaveRef);
 
         // Pan table: spread the *effective* (= active and audible) string
-        // count across [-1, +1]. Two layouts:
-        //   - Linear  (fStereoWide=false): string i -> pos = 2i/(N-1) - 1,
-        //     so adjacent strings sit next to each other in the stereo
-        //     field. Scale ascends left-to-right.
-        //   - Wide    (fStereoWide=true):  string 0 -> hard-L, string 1 ->
-        //     hard-R, string 2 -> next-to-hard-L, string 3 -> next-to-hard-R,
-        //     ... pairs converge toward the centre. Adjacent strings sit on
-        //     opposite sides; the audible width is more enveloping at the
-        //     cost of pitch-position correlation. Mono playback is
-        //     unaffected: both modes share the same set of pan positions.
+        // count across [-width, +width]. The layout (Linear / Wide / Mono)
+        // and width come from kStereoModes[fStereoMode].
+        //   - Linear:      string i -> pos = (2i/(N-1) - 1) * width
+        //   - Wide:        edges-to-centre alternating; same set of pos
+        //                  magnitudes, indexed differently
+        //   - Mono:        pos = 0 for every string (L=R=√½ all the way)
         // Strings beyond effective are silent; their pan gains don't matter
         // but we zero them for cleanliness.
+        const StereoModeDef& smode = kStereoModes[fStereoMode];
         for (uint32_t i = 0; i < kNumStrings; ++i)
         {
             if (i < effective)
             {
-                float pos;
-                if (effective == 1)
+                float pos = 0.0f;
+                if (smode.layout != StereoModeDef::Mono && effective > 1)
                 {
-                    pos = 0.0f;
-                }
-                else if (fStereoWide)
-                {
-                    const uint32_t pair = i / 2u;
-                    const float magnitude = 1.0f
-                        - 2.0f * static_cast<float>(pair) / static_cast<float>(effective - 1);
-                    const float sign = (i & 1u) ? 1.0f : -1.0f;
-                    pos = sign * magnitude;
-                }
-                else
-                {
-                    pos = (2.0f * static_cast<float>(i) / static_cast<float>(effective - 1)) - 1.0f;
+                    float rawPos;
+                    if (smode.layout == StereoModeDef::Wide)
+                    {
+                        const uint32_t pair = i / 2u;
+                        const float magnitude = 1.0f
+                            - 2.0f * static_cast<float>(pair) / static_cast<float>(effective - 1);
+                        const float sign = (i & 1u) ? 1.0f : -1.0f;
+                        rawPos = sign * magnitude;
+                    }
+                    else // Linear
+                    {
+                        rawPos = (2.0f * static_cast<float>(i) / static_cast<float>(effective - 1)) - 1.0f;
+                    }
+                    pos = rawPos * smode.widthScale;
                 }
                 const float theta = (pos + 1.0f) * 0.5f * kHalfPi;
                 fPanL[i] = std::cos(theta);
@@ -909,7 +946,7 @@ private:
     // 2^fOctave multiplier on top of the scale-anchored frequencies.
     uint32_t fNumActive = 13;
     float    fOctave    = 0.0f;
-    bool     fStereoWide = false;
+    uint32_t fStereoMode = 2;   // index into kStereoModes[]; default = Linear (full)
 
     float fDecay  = 0.5f;
     float fMix    = 0.5f;

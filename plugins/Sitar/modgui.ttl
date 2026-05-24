@@ -90,7 +90,7 @@
             lv2:symbol "bloom" ;
             lv2:name "Bloom"
         ] , [
-            lv2:symbol "stereo_wide" ;
-            lv2:name "Wide Stereo"
+            lv2:symbol "stereo_mode" ;
+            lv2:name "Stereo Mode"
         ]
     ] .

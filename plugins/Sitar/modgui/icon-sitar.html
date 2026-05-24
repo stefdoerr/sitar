@@ -75,15 +75,16 @@
             </div>
         </div>
 
-        <div class="sitar-field sitar-test-field">
-            <span class="sitar-field-label">WIDE</span>
-            <div class="sitar-test-btn mod-toggle off"
-                 mod-role="input-control-port"
-                 mod-port-symbol="stereo_wide"
-                 mod-widget="switch">
-                <span class="sitar-test-icon">&#9836;</span>
-            </div>
-        </div>
+        <label class="sitar-field">
+            <span class="sitar-field-label">STEREO</span>
+            <select class="sitar-select" mod-role="sitar-stereo">
+                <option value="mono">Mono</option>
+                <option value="linear-narrow">Linear Narrow</option>
+                <option value="linear">Linear</option>
+                <option value="wide-narrow">Wide Narrow</option>
+                <option value="wide">Wide</option>
+            </select>
+        </label>
 
     </div>
 
