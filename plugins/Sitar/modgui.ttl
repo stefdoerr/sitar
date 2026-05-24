@@ -18,6 +18,11 @@
         modgui:color "wood3" ;
         modgui:knob  "gold" ;
 
+        # The first 13 per-string frequency ports are surfaced as small
+        # fine-tune knobs in the modgui. String slots 14-48 still exist as
+        # LV2 ports (and the DSP keeps them in sync with scale/root/NUM),
+        # but they aren't shown — NUM STRINGS / OCT are the primary
+        # high-level controls.
         modgui:port [
             lv2:symbol "string_1" ;
             lv2:name "String 1"
@@ -58,6 +63,9 @@
             lv2:symbol "string_13" ;
             lv2:name "String 13"
         ] , [
+            lv2:symbol "num_active" ;
+            lv2:name "Active Strings"
+        ] , [
             lv2:symbol "octave" ;
             lv2:name "Octave"
         ] , [
@@ -81,5 +89,8 @@
         ] , [
             lv2:symbol "bloom" ;
             lv2:name "Bloom"
+        ] , [
+            lv2:symbol "stereo_wide" ;
+            lv2:name "Wide Stereo"
         ]
     ] .

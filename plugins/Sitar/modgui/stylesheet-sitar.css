@@ -246,7 +246,10 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    gap: 56px;
+    /* 6 knobs (N STRINGS / OFFSET / DECAY / BLOOM / JAWARI / MIX) in 640 px,
+       each ~56 px wide, gap kept tight so the row stays centred without
+       butting up to the audio-jack rails. */
+    gap: 28px;
 }
 .sitar-pedal .sitar-knob-tone {
     display: flex;
