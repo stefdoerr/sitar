@@ -54,7 +54,7 @@ function (event, funcs) {
 
     function stereoKeyToIndex(key) {
         var idx = STEREO_KEYS.indexOf(key);
-        return idx < 0 ? 2 : idx; // default = 'linear'
+        return idx < 0 ? 3 : idx; // default = 'wide-narrow'
     }
 
     if (event.type === 'start') {

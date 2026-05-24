@@ -180,6 +180,7 @@ public:
         kParamAudition,                       // 55 — boolean, "Test Scale" button
         kParamBloom,                          // 56 — bridge cross-coupling between strings
         kParamStereoMode,                     // 57 — enum, stereo layout (see kStereoModes[])
+        kParamGate,                           // 58 — input noise gate threshold (0 = off)
         kNumParams
     };
 
@@ -203,7 +204,8 @@ public:
     {
         fNumActive    = 13;          // pick a musical default below 48
         fOctave       = kOctaveRef;  // default = octave 3 (C3 if root=C)
-        fStereoMode   = 2;           // Linear (full) — matches old behaviour
+        fStereoMode   = 3;           // Wide Narrow — gentle spread, no hard-pan one-sided ringing
+        fGateThreshold = 1.0f;       // light gate by default (~ -54 dBFS threshold)
         fDecay        = 0.5f;
         fMix          = 0.5f;
         fJawari       = 0.0f;
@@ -383,6 +385,19 @@ protected:
             parameter.ranges.def = 0.0f;
             break;
 
+        case kParamGate:
+            // Range 0..10 is the user-facing scale; 10 ≈ -34 dBFS linear
+            // threshold internally (kGateScale below). Keeps the knob
+            // readable in MOD's 2-decimal display instead of crushed
+            // against zero.
+            parameter.hints      = kParameterIsAutomatable;
+            parameter.name       = "Gate";
+            parameter.symbol     = "gate";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 10.0f;
+            parameter.ranges.def = 1.0f;   // light default — tames noise floor without cutting playing
+            break;
+
         case kParamStereoMode:
         {
             parameter.hints      = kParameterIsAutomatable | kParameterIsInteger;
@@ -390,7 +405,7 @@ protected:
             parameter.symbol     = "stereo_mode";
             parameter.ranges.min = 0.0f;
             parameter.ranges.max = static_cast<float>(kNumStereoModes - 1);
-            parameter.ranges.def = 2.0f;                                       // Linear (full)
+            parameter.ranges.def = 3.0f;                                       // Wide Narrow
             parameter.enumValues.count          = static_cast<uint8_t>(kNumStereoModes);
             parameter.enumValues.restrictedMode = true;
             ParameterEnumerationValue* const ev = new ParameterEnumerationValue[kNumStereoModes];
@@ -422,6 +437,7 @@ protected:
         case kParamAudition:     return fAuditionActive ? 1.0f : 0.0f;
         case kParamBloom:        return fBloom;
         case kParamStereoMode:   return static_cast<float>(fStereoMode);
+        case kParamGate:         return fGateThreshold;
         }
         return 0.0f;
     }
@@ -546,6 +562,11 @@ protected:
             }
             break;
         }
+        case kParamGate:
+            if (value < 0.0f)  value = 0.0f;
+            if (value > 10.0f) value = 10.0f;
+            fGateThreshold = value;
+            break;
         }
     }
 
@@ -555,8 +576,12 @@ protected:
     {
         for (uint32_t i = 0; i < kNumStrings; ++i)
             fCombs[i].clear();
-        fBridgeState = 0.0f;
-        fBridgeDcX   = 0.0f;
+        fBridgeState   = 0.0f;
+        fBridgeDcX     = 0.0f;
+        fGateEnvelope  = 0.0f;
+        fGateOpen      = 1.0f;
+        fJawariLpfL    = 0.0f;
+        fJawariLpfR    = 0.0f;
     }
 
     void sampleRateChanged(double newSampleRate) override
@@ -568,6 +593,20 @@ protected:
         fAuditionPhaseSamples = static_cast<uint32_t>(newSampleRate * 2.0);       // 2 seconds per string
         fAuditionPluckSamples = static_cast<uint32_t>(newSampleRate * 0.030);     // 30 ms pluck
         if (fAuditionPluckSamples == 0) fAuditionPluckSamples = 1;
+
+        // Gate envelope/release/smoothing coefficients:
+        //   - envelope release: 80 ms half-life so brief drops within a note
+        //     don't slam the gate shut.
+        //   - gate-open smoother: 8 ms half-life so transitions don't click.
+        // Both formulated as exp-decay one-pole coefficients.
+        const float fs = static_cast<float>(newSampleRate);
+        fGateReleaseCoef = std::exp(-1.0f / (fs * 0.080f));     // 80 ms envelope release
+        fGateSmoothCoef  = 1.0f - std::exp(-1.0f / (fs * 0.008f));  // 8 ms gate state smoothing
+
+        // Jawari tilt-down: one-pole LPF after the saturation tames the
+        // harsh harmonics. Corner ~3.5 kHz keeps body / presence but cuts
+        // brittle sizzle. Only applied when jawari > 0.
+        fJawariLpfCoef = 1.0f - std::exp(-2.0f * 3.14159265358979f * 3500.0f / fs);
 
         retuneAllStrings();
         applyDecay();
@@ -589,6 +628,17 @@ protected:
         // Jawari drive: 1x to 8x gain into a tanh saturator. Make-up keeps output level roughly steady.
         const float drive   = 1.0f + jawari * 7.0f;
         const float makeUp  = 1.0f / std::tanh(drive);
+
+        // Gate state: when the input envelope drops below the threshold,
+        // fGateOpen smoothly approaches 0 and the signal feeding the combs
+        // is muted, so background noise stops exciting new resonance. Combs
+        // continue ringing at the user-set decay — the gate doesn't touch
+        // feedback. fGateThreshold = 0 disables the gate (acts as "always
+        // open"). The user-facing knob is 0..10 for readable resolution;
+        // kGateScale maps that to an internal linear-amplitude threshold.
+        constexpr float kGateScale = 0.002f;                    // 10 on the knob ≈ -34 dBFS
+        const float     gateThresholdLin = fGateThreshold * kGateScale;
+        const bool      gateActive       = fGateThreshold > 0.0f;
 
         // Count effectively-ringing strings — used to dynamically normalise
         // the wet sum (1/√N keeps perceived loudness roughly constant as
@@ -711,10 +761,34 @@ protected:
             }
 
             // ----- Normal mode -----
+
+            // Noise gate: peak envelope follower with instant attack + 80 ms
+            // exponential release. When the envelope drops below the
+            // threshold, fGateOpen smoothly approaches 0 and we mute the
+            // signal feeding the combs — background noise stops exciting
+            // new resonance, but existing rings keep decaying at the
+            // user-set rate.
+            if (gateActive)
+            {
+                const float xAbs = std::fabs(x);
+                if (xAbs > fGateEnvelope)
+                    fGateEnvelope = xAbs;                                  // instant attack
+                else
+                    fGateEnvelope = xAbs + (fGateEnvelope - xAbs) * fGateReleaseCoef;
+
+                const float target = (fGateEnvelope > gateThresholdLin) ? 1.0f : 0.0f;
+                fGateOpen += (target - fGateOpen) * fGateSmoothCoef;
+            }
+            else
+            {
+                fGateOpen = 1.0f;
+            }
+
+            const float gatedX = x * fGateOpen;
             const float bloomInput = (bloomCoupling > 0.0f)
                 ? std::tanh(bloomCoupling * fBridgeState)
                 : 0.0f;
-            const float stringInput = x + bloomInput;
+            const float stringInput = gatedX + bloomInput;
 
             // Skip inactive combs entirely — saves ~98% of comb math when
             // NUM is low. Inactive combs get cleared in applyScaleAndRoot
@@ -758,6 +832,15 @@ protected:
             {
                 wetL = std::tanh(wetL * drive) * makeUp;
                 wetR = std::tanh(wetR * drive) * makeUp;
+
+                // Tilt-down: one-pole LPF at ~3.5 kHz tames the brittle
+                // top-end harmonics jawari's tanh saturation generates. Per
+                // channel so stereo image is preserved. Bypassed when jawari
+                // is off so the dry-ish path stays full-bandwidth.
+                fJawariLpfL = fJawariLpfCoef * wetL + (1.0f - fJawariLpfCoef) * fJawariLpfL;
+                fJawariLpfR = fJawariLpfCoef * wetR + (1.0f - fJawariLpfCoef) * fJawariLpfR;
+                wetL = fJawariLpfL;
+                wetR = fJawariLpfR;
             }
 
             outL[f] = dryGain * x + wetGain * wetL;
@@ -946,7 +1029,7 @@ private:
     // 2^fOctave multiplier on top of the scale-anchored frequencies.
     uint32_t fNumActive = 13;
     float    fOctave    = 0.0f;
-    uint32_t fStereoMode = 2;   // index into kStereoModes[]; default = Linear (full)
+    uint32_t fStereoMode = 3;   // index into kStereoModes[]; default = Wide Narrow
 
     float fDecay  = 0.5f;
     float fMix    = 0.5f;
@@ -964,6 +1047,21 @@ private:
     // Cached comb-filter feedback coefficient, set in applyDecay(). Used by
     // run() to derive the stable bloom-coupling max for the current Decay.
     float fFeedback = 0.0f;
+
+    // Noise-gate state. fGateEnvelope is the running peak-with-release
+    // envelope of the input; fGateOpen is the smoothed gate-state in [0,1]
+    // (1 = fully open, 0 = fully closed). Coefficients come from
+    // sampleRateChanged().
+    float fGateThreshold    = 0.0f;
+    float fGateEnvelope     = 0.0f;
+    float fGateOpen         = 1.0f;
+    float fGateReleaseCoef  = 0.0f;
+    float fGateSmoothCoef   = 0.0f;
+
+    // One-pole LPF state for the post-jawari tilt-down EQ (per channel).
+    float fJawariLpfL    = 0.0f;
+    float fJawariLpfR    = 0.0f;
+    float fJawariLpfCoef = 1.0f;
 
     uint32_t fScaleIdx = 0;
     uint32_t fRootIdx  = 0;
