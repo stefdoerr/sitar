@@ -7,11 +7,20 @@
 # instead, override with:
 #   MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins ./install.sh
 #
+# Set BETA=1 to install the side-by-side beta variant (sitar-beta.lv2)
+# instead of the stable sitar.lv2. Useful for A/B testing a feature
+# branch against the released plugin. Build first with `make BETA=1` or
+# use the `make install-beta` convenience target.
+#
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUNDLE_SRC="$REPO_DIR/bin/sitar.lv2"
+BUNDLE_NAME="sitar"
+if [[ -n "${BETA:-}" && "$BETA" != "0" ]]; then
+    BUNDLE_NAME="sitar-beta"
+fi
+BUNDLE_SRC="$REPO_DIR/bin/${BUNDLE_NAME}.lv2"
 DEST="${MOD_DESKTOP_PLUGINS:-$HOME/Documents/MOD Desktop/lv2}"
 
 if [[ ! -d "$BUNDLE_SRC" ]]; then
@@ -26,7 +35,7 @@ if [[ ! -d "$DEST" ]]; then
     exit 1
 fi
 
-DEST_BUNDLE="$DEST/sitar.lv2"
+DEST_BUNDLE="$DEST/${BUNDLE_NAME}.lv2"
 
 # Remove the previous install so stale TTL or modgui files from older builds
 # don't linger alongside fresh ones.

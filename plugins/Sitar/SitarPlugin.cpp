@@ -195,17 +195,27 @@ public:
 protected:
     // ---------------- Information ----------------
 
-    const char* getLabel()       const override { return "sitar"; }
+    // All branding methods derive from DistrhoPluginInfo.h, which is the
+    // single source of truth for stable-vs-beta identity (see SITAR_BETA).
+    const char* getLabel()       const override { return DISTRHO_PLUGIN_BRAND; }
     const char* getDescription() const override
     {
         return "Sympathetic resonance string simulator. Drives up to 48 tuned comb-filter strings spanning "
                "4 octaves above the root to produce sitar-like ringing, microtonal accompaniment.";
     }
-    const char* getMaker()    const override { return "sitar"; }
-    const char* getHomePage() const override { return "http://sitar.local/plugins/sitar"; }
+    const char* getMaker()    const override { return DISTRHO_PLUGIN_BRAND; }
+    const char* getHomePage() const override { return DISTRHO_PLUGIN_URI; }
     const char* getLicense()  const override { return "ISC"; }
     uint32_t    getVersion()  const override { return d_version(0, 1, 0); }
-    int64_t     getUniqueId() const override { return d_cconst('d', 'S', 't', 'r'); }
+    int64_t     getUniqueId() const override
+    {
+        // Match the d_cconst that DPF uses for DISTRHO_PLUGIN_UNIQUE_ID.
+#ifdef SITAR_BETA
+        return d_cconst('d', 'S', 't', 'b');
+#else
+        return d_cconst('d', 'S', 't', 'r');
+#endif
+    }
 
     // ---------------- Init ----------------
 

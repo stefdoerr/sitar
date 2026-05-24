@@ -3,7 +3,23 @@
 # -----------------------------------------------
 
 PLUGIN_DIR := plugins/Sitar
-BUNDLE     := bin/sitar.lv2
+
+# Set BETA=1 to produce a side-by-side beta build: distinct LV2 URI,
+# bundle name, brand, and unique id. Same source, different identity —
+# install with `make BETA=1 install` (or the `make beta` shortcut) and
+# it'll coexist with the stable plugin in MOD Desktop. Used to A/B test
+# a work-in-progress against the released plugin.
+ifeq ($(BETA),1)
+export SITAR_BETA := 1
+BUNDLE_NAME := sitar-beta
+BUNDLE_LABEL := Sympathetic Sitar (Beta)
+PLUGIN_URI   := http://sitar.local/plugins/sitar-beta
+else
+BUNDLE_NAME := sitar
+BUNDLE_LABEL := Sympathetic Sitar
+PLUGIN_URI   := http://sitar.local/plugins/sitar
+endif
+BUNDLE := bin/$(BUNDLE_NAME).lv2
 
 .PHONY: all plugin ttl modgui clean distclean
 
@@ -34,10 +50,16 @@ modgui: ttl
 	cp -f $(PLUGIN_DIR)/modgui/*.js   $(BUNDLE)/modgui/
 	cp -f $(PLUGIN_DIR)/modgui/*.png  $(BUNDLE)/modgui/
 	cp -rf $(PLUGIN_DIR)/modgui/knobs $(BUNDLE)/modgui/
-	cp -f $(PLUGIN_DIR)/modgui.ttl    $(BUNDLE)/modgui.ttl
+	@# Patch the modgui.ttl with the current build's URI / brand / label.
+	@# Source TTL contains the stable identity; sed swaps it out when BETA=1
+	@# (no-op when BETA is unset, since the substitutions become identity).
+	sed -e 's|http://sitar.local/plugins/sitar|$(PLUGIN_URI)|g' \
+	    -e 's|modgui:brand "sitar"|modgui:brand "$(BUNDLE_NAME)"|' \
+	    -e 's|modgui:label "Sympathetic Sitar"|modgui:label "$(BUNDLE_LABEL)"|' \
+	    $(PLUGIN_DIR)/modgui.ttl > $(BUNDLE)/modgui.ttl
 	@if ! grep -q 'modgui.ttl' $(BUNDLE)/manifest.ttl; then \
 		printf '\n<%s>\n    rdfs:seeAlso <modgui.ttl> .\n' \
-			"http://sitar.local/plugins/sitar" >> $(BUNDLE)/manifest.ttl; \
+			"$(PLUGIN_URI)" >> $(BUNDLE)/manifest.ttl; \
 	fi
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -62,7 +84,18 @@ install: all
 	@mkdir -p "$(LV2_DIR)"
 	cp -rL "$(BUNDLE)" "$(LV2_DIR)/"
 
-.PHONY: install
+# Convenience shortcuts for the side-by-side beta variant.
+# `make beta`           — build bin/sitar-beta.lv2 (does NOT install)
+# `make install-beta`   — build + copy to MOD Desktop's user-plugin dir
+#                          (or wherever install.sh's MOD_DESKTOP_PLUGINS points)
+beta:
+	$(MAKE) BETA=1
+
+install-beta:
+	$(MAKE) BETA=1
+	BETA=1 ./install.sh
+
+.PHONY: install beta install-beta
 
 # ---------------------------------------------------------------------------------------------------------------------
 # MOD Dwarf cross-build — self-contained, no host workdir or external clones.
