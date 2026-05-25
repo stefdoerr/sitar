@@ -229,7 +229,7 @@ The plugin source is released under [CC0 1.0 Universal](https://creativecommons.
 — effectively public domain, no attribution required. Use it however
 you want.
 
-DPF is ISC/MIT depending on the file (see [`dpf/LICENSE`](dpf/LICENSE)).
+DPF is ISC-licensed (see [`dpf/LICENSE`](dpf/LICENSE)).
 
 The MOD modgui knob sprite at `plugins/Sitar/modgui/knobs/sitar-knob.png`
 is generated procedurally (see `generate_knob.py` in that folder) and is
