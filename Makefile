@@ -147,13 +147,19 @@ dwarf-deploy:
 		exit 1; \
 	fi
 	scp -O -r "$(DWARF_BUNDLE)" "$(DWARF_USER)@$(DWARF_HOST):$(DWARF_LV2DIR)/"
-	@echo "==> Restarting jack2 so the new bundle is picked up"
-	@# jack2 hosts mod-host internally (visible in logs as 'mod-jackd'),
-	@# and it caches the lilv plugin world at startup. Restarting mod-ui
-	@# alone is NOT enough — the UI sees the new plugin but jack2 still
-	@# can't instantiate it ("can't get plugin" in journalctl).
-	@# Audio drops for ~1-2s while jack2 comes back.
-	ssh "$(DWARF_USER)@$(DWARF_HOST)" 'systemctl restart jack2'
+	@echo "==> Restarting jack2 + mod-ui so the new bundle is picked up"
+	@# Two independent lilv plugin caches on the Dwarf:
+	@#   - jack2 hosts mod-host internally (visible in logs as 'mod-jackd')
+	@#     and caches the plugin world at startup. Without this restart the
+	@#     pedalboard fails with "can't get plugin" / "Error adding effect".
+	@#   - mod-ui (the web UI) has its OWN cache used to render the plugin
+	@#     library, port lists, and modgui. Without this restart the UI
+	@#     shows the *old* port set ("No such symbol: gate/level/...") even
+	@#     though jack2 picked up the new bundle correctly.
+	@# Audio drops for ~1-2 s while jack2 comes back. After the deploy you
+	@# also need to hard-refresh the browser (Ctrl-Shift-R) so mod-ui's
+	@# JS-side plugin metadata isn't served from the browser cache.
+	ssh "$(DWARF_USER)@$(DWARF_HOST)" 'systemctl restart jack2 mod-ui'
 
 # Convenience: build then deploy.
 dwarf: dwarf-build dwarf-deploy
