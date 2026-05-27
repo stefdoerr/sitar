@@ -167,20 +167,45 @@ dwarf: dwarf-build dwarf-deploy
 .PHONY: dwarf dwarf-build dwarf-image dwarf-deploy
 
 # ---------------------------------------------------------------------------------------------------------------------
-# release: tag the current commit as v$(version) and push the tag, which
-# triggers the GitHub Actions release workflow.
+# release: build desktop + dwarf bundles locally, package them, tag the
+# current commit as v$(version), push, and create a GitHub release with
+# both bundles attached as downloadable assets.
 #
-#   make release version=0.1.0
+#   make release version=0.0.4
 #
-# Refuses to run on a dirty tree or if the tag already exists, so accidental
-# releases are hard to make.
+# We build the artefacts locally (instead of from CI) because the Dwarf
+# cross-toolchain docker image takes ~30-60 min to assemble from scratch
+# and is hard to cache reliably on a fresh GH Actions runner. Locally
+# the image is already there and `make dwarf-build` is ~10 s, so doing
+# the publish from the developer machine is both faster and simpler.
+#
+# Refuses to run on a dirty tree, if the tag already exists, or if the
+# bundles fail to build — so half-published releases are hard to make.
 
-release:
+DIST_DIR := dist
+LINUX_TARBALL := sitar-v$(version)-linux-x86_64.tar.gz
+DWARF_TARBALL := sitar-v$(version)-dwarf-aarch64.tar.gz
+
+# Build + package both bundles for a release. Doesn't tag or push; useful
+# on its own for testing what the assets look like before publishing.
+release-build:
 	@if [ -z "$(version)" ]; then \
 		echo "error: version is required."; \
-		echo "       usage: make release version=x.y.z"; \
+		echo "       usage: make release-build version=x.y.z"; \
 		exit 1; \
 	fi
+	@echo "==> Building desktop bundle (Linux x86_64)"
+	$(MAKE) clean all
+	@mkdir -p $(DIST_DIR)
+	tar -C bin -czf $(DIST_DIR)/$(LINUX_TARBALL) sitar.lv2
+	@echo "==> Building Dwarf bundle (aarch64)"
+	$(MAKE) dwarf-build
+	tar -C build/dwarf -czf $(DIST_DIR)/$(DWARF_TARBALL) sitar.lv2
+	@echo
+	@echo "Built release artefacts in $(DIST_DIR)/:"
+	@ls -lh $(DIST_DIR)/sitar-v$(version)-*.tar.gz
+
+release: release-build
 	@if [ -n "$$(git status --porcelain)" ]; then \
 		echo "error: working tree is dirty. Commit or stash first."; \
 		git status --short; \
@@ -195,8 +220,14 @@ release:
 	@echo "==> Tagging v$(version)"
 	git tag -a "v$(version)" -m "Release v$(version)"
 	git push origin "v$(version)"
+	@echo "==> Creating GitHub release v$(version) with both bundles attached"
+	gh release create "v$(version)" \
+		"$(DIST_DIR)/$(LINUX_TARBALL)" \
+		"$(DIST_DIR)/$(DWARF_TARBALL)" \
+		--title "v$(version)" \
+		--generate-notes
 	@echo
-	@echo "Tag v$(version) pushed. CI will build and publish the release shortly:"
-	@echo "  https://github.com/$$(git config --get remote.origin.url | sed -E 's|.*[:/]([^:/]+/[^/]+?)(\.git)?$$|\1|')/actions"
+	@echo "Release published:"
+	@echo "  https://github.com/$$(git config --get remote.origin.url | sed -E 's|.*[:/]([^:/]+/[^/]+?)(\.git)?$$|\1|')/releases/tag/v$(version)"
 
-.PHONY: release
+.PHONY: release release-build

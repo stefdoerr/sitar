@@ -89,8 +89,17 @@ sudo apt install build-essential pkg-config git
 
 ### MOD Desktop (Linux, x86_64)
 
+**Prebuilt bundle** (recommended): grab
+`sitar-vX.Y.Z-linux-x86_64.tar.gz` from the
+[Releases page](https://github.com/stefdoerr/sitar/releases),
+extract it, and copy the `sitar.lv2/` directory into your MOD Desktop
+plugins directory (default `~/Documents/MOD Desktop/lv2/`). Restart
+MOD Desktop.
+
+**Or build from source:**
+
 ```bash
-git clone --recurse-submodules https://github.com/YOUR_USER/sitar.git
+git clone --recurse-submodules https://github.com/stefdoerr/sitar.git
 cd sitar
 make
 ./install.sh                       # installs to MOD Desktop's plugin dir
@@ -110,8 +119,16 @@ Restart MOD Desktop and the plugin appears under brand **"sitar"** as
 
 ### MOD Dwarf (hardware, aarch64)
 
-Cross-compile via Docker — fully self-contained. The only host requirement
-is Docker. From a clean machine:
+**Prebuilt bundle** (recommended): grab
+`sitar-vX.Y.Z-dwarf-aarch64.tar.gz` from the
+[Releases page](https://github.com/stefdoerr/sitar/releases), extract,
+and copy the `sitar.lv2/` directory into the Dwarf's `/root/.lv2/`
+(via `scp -O -r sitar.lv2 root@192.168.51.1:/root/.lv2/`). Then SSH in
+and run `systemctl restart jack2 mod-ui` so the new plugin world is
+picked up.
+
+**Or cross-compile from source** via Docker (the only host requirement is
+Docker). From a clean machine:
 
 ```bash
 make dwarf-image          # one-time, ~30-60 min — builds Docker image with the aarch64 cross-toolchain inline
