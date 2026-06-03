@@ -334,24 +334,13 @@
 }
 
 /* ============================ Audio I/O jacks ============================
-   The jacks stick OUTSIDE the pedal frame (MOD-UI's convention — see the
-   default rule in pedals.css: left:-88px / right:-88px). MOD-UI styles the
-   visible jack via .mod-input / .mod-output backgrounds. We position the
-   containers; MOD provides the jack visuals.
+   No overrides. MOD-UI's pedals.css + dashboard.css fully styles and
+   positions the jacks (left:-87px / right:-87px, top:106px, 56 px tall
+   with 13 px margin-bottom between siblings, jack visuals from the
+   bundled PNG sprites). Its drag handler computes cable endpoints
+   against those exact defaults — any custom top/margin we apply
+   re-introduces drift between the cable end and the visual plug.
 
-   Z-index 30 matches MOD's default so jacks render above pedalboard cables. */
-.sitar-pedal .mod-pedal-input,
-.sitar-pedal .mod-pedal-output {
-    position: absolute;
-    top: 108px;
-    width: 44px;
-    height: 90px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
-    z-index: 30;
-}
-.sitar-pedal .mod-pedal-input  { left:  -44px; align-items: flex-end;   }
-.sitar-pedal .mod-pedal-output { right: -44px; align-items: flex-start; }
+   If the jack stack ends up vertically off-centre on a tall custom
+   pedal, the right fix is to RESIZE the pedal to a standard MOD
+   pedal height (~160-220 px), NOT to nudge the jacks. */
