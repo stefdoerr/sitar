@@ -35,6 +35,12 @@ jobs:
 
       - name: Verify build artefacts
         run: |
+          # The tag must match the VERSION file (make release keeps them in
+          # sync), and the built TTL must actually embed that version.
+          VERSION="${GITHUB_REF_NAME#v}"
+          test "$(cat VERSION)" = "$VERSION"
+          MICRO="${VERSION##*.}"
+          grep -q "lv2:microVersion $MICRO" bin/sitar.lv2/sitar.ttl
           test -f bin/sitar.lv2/sitar.so
           test -f bin/sitar.lv2/manifest.ttl
           test -f bin/sitar.lv2/sitar.ttl

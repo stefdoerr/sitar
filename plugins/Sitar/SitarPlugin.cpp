@@ -238,7 +238,17 @@ protected:
     const char* getMaker()    const override { return DISTRHO_PLUGIN_BRAND; }
     const char* getHomePage() const override { return DISTRHO_PLUGIN_URI; }
     const char* getLicense()  const override { return "ISC"; }
-    uint32_t    getVersion()  const override { return d_version(0, 1, 0); }
+    uint32_t    getVersion()  const override
+    {
+        // Injected by the Makefile from the top-level VERSION file, which
+        // `make release` keeps in sync with the release tag. The fallback
+        // marks builds outside the Makefile (e.g. the test harness) 0.0.0.
+#ifdef SITAR_VERSION_MAJOR
+        return d_version(SITAR_VERSION_MAJOR, SITAR_VERSION_MINOR, SITAR_VERSION_MICRO);
+#else
+        return d_version(0, 0, 0);
+#endif
+    }
     int64_t     getUniqueId() const override
     {
         // Match the d_cconst that DPF uses for DISTRHO_PLUGIN_UNIQUE_ID.

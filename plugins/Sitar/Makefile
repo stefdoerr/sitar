@@ -24,6 +24,22 @@ NAME = sitar
 endif
 
 # --------------------------------------------------------------
+# Plugin version — the top-level VERSION file is the single source of
+# truth (`make release` keeps it in sync with the release tag). Injected
+# as preprocessor defines so getVersion() and the generated LV2 TTL
+# always report the released version. Goes through CXXFLAGS for the same
+# reason as SITAR_BETA above.
+
+SITAR_VERSION := $(strip $(shell cat ../../VERSION 2>/dev/null))
+ifeq ($(SITAR_VERSION),)
+$(error VERSION file not found at ../../VERSION)
+endif
+SITAR_VERSION_PARTS := $(subst ., ,$(SITAR_VERSION))
+CXXFLAGS += -DSITAR_VERSION_MAJOR=$(word 1,$(SITAR_VERSION_PARTS)) \
+            -DSITAR_VERSION_MINOR=$(word 2,$(SITAR_VERSION_PARTS)) \
+            -DSITAR_VERSION_MICRO=$(word 3,$(SITAR_VERSION_PARTS))
+
+# --------------------------------------------------------------
 # Files to build
 
 FILES_DSP = \
