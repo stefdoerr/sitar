@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sympathetic Sitar User Manual</title>
+<style>
+/* ==========================================================================
+   Sympathetic Sitar beginner manual — print source.
+   Rendered to PDF with headless Chrome via `make manual` (A4).
+   Edit this file, never the PDF.
+   ========================================================================== */
+
+:root {
+    --wood:   #2a1c10;   /* cover background — matches the pedal face    */
+    --wood2:  #3c2a18;
+    --gold:   #d9a441;   /* knob-gold accent                             */
+    --gold-d: #a17324;   /* darker gold for headings on white            */
+    --ink:    #2a241c;   /* body text                                    */
+    --muted:  #6a5f4f;   /* secondary text                               */
+    --line:   #e0d8c8;   /* hairlines / table borders                    */
+    --wash:   #f6f1e7;   /* light panel background                       */
+}
+
+@page        { size: A4; margin: 18mm 16mm; }
+@page :first { margin: 0; }
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    font-size: 10pt;
+    line-height: 1.55;
+}
+
+h2 {
+    font-size: 17pt;
+    color: var(--gold-d);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 4px;
+    margin: 0 0 10px 0;
+    break-after: avoid;
+}
+h3 {
+    font-size: 11.5pt;
+    color: var(--ink);
+    margin: 14px 0 6px 0;
+    break-after: avoid;
+}
+p  { margin: 0 0 8px 0; }
+code {
+    font-family: "DejaVu Sans Mono", "Liberation Mono", Menlo, Consolas, monospace;
+    background: var(--wash);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 3px;
+    font-size: 8.5pt;
+}
+pre {
+    font-family: "DejaVu Sans Mono", "Liberation Mono", Menlo, Consolas, monospace;
+    background: var(--wash);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--gold);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 8pt;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    margin: 6px 0 10px 0;
+    break-inside: avoid;
+}
+
+section { break-before: page; }
+section.flow { break-before: auto; margin-top: 22px; }
+.pb { break-before: page; }
+
+/* ---- cover ---- */
+
+.cover {
+    width: 210mm;
+    height: 296mm;             /* 1mm shy of A4 so rounding can't spill a blank page */
+    background:
+        radial-gradient(ellipse at 30% 10%, rgba(217, 164, 65, 0.16), transparent 55%),
+        radial-gradient(ellipse at 85% 90%, rgba(161, 115, 36, 0.20), transparent 60%),
+        linear-gradient(160deg, var(--wood) 0%, var(--wood2) 60%, #1e130a 100%);
+    color: #f3ecdf;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20mm;
+}
+.cover .brand {
+    letter-spacing: 0.55em;
+    font-size: 10pt;
+    color: rgba(238, 226, 203, 0.6);
+    text-transform: uppercase;
+    margin-bottom: 4mm;
+}
+.cover h1 {
+    font-size: 30pt;
+    letter-spacing: 0.18em;
+    margin: 0 0 3mm 0.18em;    /* left inset balances the letter-spacing tail */
+    color: #f8f2e6;
+    font-weight: 700;
+}
+.cover .tagline {
+    font-size: 13pt;
+    color: var(--gold);
+    letter-spacing: 0.06em;
+    margin-bottom: 14mm;
+}
+.cover img {
+    width: 130mm;
+    border-radius: 4mm;
+    box-shadow: 0 6mm 18mm rgba(0, 0, 0, 0.55);
+    margin-bottom: 16mm;
+}
+.cover .subtitle {
+    font-size: 12pt;
+    color: rgba(243, 236, 223, 0.9);
+    margin-bottom: 2mm;
+}
+.cover .edition {
+    font-size: 9.5pt;
+    color: rgba(238, 226, 203, 0.55);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* ---- pedal image with numbered callout badges ---- */
+
+.pedal-map {
+    position: relative;
+    width: 150mm;
+    margin: 4mm auto 6mm auto;
+    break-inside: avoid;
+}
+.pedal-map img {
+    width: 100%;
+    display: block;
+    border-radius: 3mm;
+    box-shadow: 0 2mm 6mm rgba(42, 28, 16, 0.35);
+}
+.badge, .pedal-map .pin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--gold-d);
+    color: #fff;
+    font-size: 7.5pt;
+    font-weight: 700;
+    line-height: 1;
+    flex: none;
+}
+.pedal-map .pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+/* ---- control tables & knob cards ---- */
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6px 0 12px 0;
+    break-inside: avoid;
+}
+th, td {
+    border: 1px solid var(--line);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+th {
+    background: var(--wash);
+    color: var(--gold-d);
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+td.ctl { white-space: nowrap; font-weight: 700; }
+
+.knob-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+}
+.knob {
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 7px 9px 5px 9px;
+    break-inside: avoid;
+}
+.knob h4 {
+    margin: 0 0 3px 0;
+    font-size: 10.5pt;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.knob p { font-size: 9.2pt; margin-bottom: 4px; }
+.knob ul {
+    margin: 0;
+    padding-left: 14px;
+    font-size: 8.8pt;
+    color: var(--muted);
+}
+.knob li { margin-bottom: 1px; }
+.knob li b { color: var(--ink); font-weight: 600; }
+
+/* ---- recipes ---- */
+
+.recipe {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--gold);
+    border-radius: 5px;
+    padding: 8px 11px;
+    margin-bottom: 9px;
+    break-inside: avoid;
+}
+.recipe h3 { margin: 0 0 4px 0; color: var(--gold-d); }
+.recipe .set {
+    font-size: 8.8pt;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+.recipe .set b { color: var(--ink); font-weight: 600; }
+.recipe p { font-size: 9.3pt; margin: 0; }
+
+/* ---- tips / faq ---- */
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    margin-top: 4px;
+}
+.tip { break-inside: avoid; margin-bottom: 9px; }
+.tip h3 { margin: 0 0 2px 0; }
+.tip p  { font-size: 9.4pt; }
+
+dl.faq { margin: 6px 0; }
+dl.faq dt {
+    font-weight: 700;
+    margin-top: 9px;
+    break-after: avoid;
+}
+dl.faq dd {
+    margin: 1px 0 0 0;
+    font-size: 9.4pt;
+}
+dl.faq .qa { break-inside: avoid; }
+
+/* ---- misc ---- */
+
+.note {
+    background: var(--wash);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 4px 4px 0;
+    padding: 6px 10px;
+    font-size: 9.3pt;
+    margin: 8px 0;
+    break-inside: avoid;
+}
+ol.steps { padding-left: 18px; margin: 4px 0 8px 0; }
+ol.steps li { margin-bottom: 5px; }
+a { color: var(--gold-d); text-decoration: none; }
+.credits {
+    margin-top: 14px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-size: 8.8pt;
+    color: var(--muted);
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================= page 1: cover -->
+<div class="cover">
+    <div class="brand">sitar</div>
+    <h1>SYMPATHETIC SITAR</h1>
+    <div class="tagline">A halo of strings that rings along with everything you play.</div>
+    <img src="../../plugins/Sitar/modgui/screenshot-sitar.png" alt="The Sympathetic Sitar pedal">
+    <div class="subtitle">Sympathetic-resonance pedal for MOD Desktop and MOD Dwarf</div>
+    <div class="edition">User Manual &middot; July 2026 edition</div>
+</div>
+
+<!-- ============================================ page 2: intro + quick start -->
+<section>
+    <h2>What Sympathetic Sitar does</h2>
+    <p>
+        Underneath the playing strings of a real sitar lies a second set of strings the
+        player never touches: the <b>taraf</b>, or sympathetic strings. They are tuned
+        to the notes of the raga, and they ring on their own whenever the music passes
+        over their pitch — a silvery halo that shadows every phrase.
+    </p>
+    <p>
+        Sympathetic Sitar gives that halo to <b>any instrument</b>. Send a guitar, a
+        synth, a voice — anything — through it, and a bank of up to <b>48 tuned
+        strings</b> rings along with what you play. You choose the tuning: the strings
+        follow the <b>scale and key you pick</b>, from familiar Western scales to
+        Turkish makams and Hindustani ragas with their authentic in-between notes.
+    </p>
+    <p>
+        Play a note the strings know, and it blooms. Play a chord, and the whole bank
+        shimmers back at you, slowly fading like a piano with the sustain pedal down.
+        You are not adding an effect on top of your sound — you are playing a roomful
+        of strings with it.
+    </p>
+    <div class="note">
+        <b>Good to know:</b> the strings only ring at <i>their own</i> pitches. Put the
+        pedal <i>after</i> the effects you want the strings to hear (drive, wah&nbsp;&hellip;)
+        and <i>before</i> big ambient effects like reverb and delay, so the halo washes
+        into the room with everything else.
+    </div>
+
+    <h2 style="margin-top:18px">Quick start</h2>
+    <ol class="steps">
+        <li><b>Add Sympathetic Sitar to your pedalboard.</b> In the MOD web interface,
+            find it under the brand <b>sitar</b> and drag it into your signal chain.</li>
+        <li><b>Pick your key.</b> Set <b>ROOT</b> to the key of your song and leave
+            <b>SCALE</b> on Major (or pick the scale you are playing in).</li>
+        <li><b>Press TEST.</b> The pedal plucks each string in turn, low to high, so
+            you can hear exactly what the halo is tuned to. Press again to stop.</li>
+        <li><b>Play.</b> Notes that belong to the scale make the strings bloom and
+            ring after you.</li>
+        <li><b>Balance it.</b> Turn <b>MIX</b> up for more halo, and <b>DECAY</b> up
+            for a longer ring.</li>
+    </ol>
+    <div class="note">
+        <b>The one trick to learn:</b> match <b>ROOT</b> (and SCALE) to the music you
+        are playing. Strings tuned to the wrong key will still ring — at the wrong
+        notes. If the halo ever sounds sour, the tuning is the first thing to check.
+    </div>
+</section>
+
+<!-- ================================================== page 3: the controls -->
+<section>
+    <h2>The controls</h2>
+    <div class="pedal-map">
+        <img src="../../plugins/Sitar/modgui/screenshot-sitar.png" alt="Sympathetic Sitar control layout">
+        <span class="pin" style="left:23%;   top:26.5%;">1</span>
+        <span class="pin" style="left:47%;   top:26.5%;">2</span>
+        <span class="pin" style="left:61.5%; top:25%;">3</span>
+        <span class="pin" style="left:77.7%; top:26.5%;">4</span>
+        <span class="pin" style="left:48.8%; top:42%;">5</span>
+        <span class="pin" style="left:9.7%;  top:77.5%;">6</span>
+        <span class="pin" style="left:18.9%; top:77.5%;">7</span>
+        <span class="pin" style="left:28.9%; top:77.5%;">8</span>
+        <span class="pin" style="left:39%;   top:77.5%;">9</span>
+        <span class="pin" style="left:49.7%; top:77.5%;">10</span>
+        <span class="pin" style="left:59.4%; top:77.5%;">11</span>
+        <span class="pin" style="left:68.8%; top:77.5%;">12</span>
+        <span class="pin" style="left:79.4%; top:77.5%;">13</span>
+        <span class="pin" style="left:89.5%; top:77.5%;">14</span>
+    </div>
+
+    <h3>Selectors &amp; buttons</h3>
+    <table>
+        <tr><th style="width:24%">Control</th><th>What it does</th></tr>
+        <tr>
+            <td class="ctl"><span class="badge">1</span> SCALE</td>
+            <td>Which notes the strings are tuned to. <b>24 scales</b>: fourteen Western
+                (major, minors, modes, pentatonics, blues&nbsp;&hellip;), four Turkish makams
+                (Rast, U&#351;&#351;ak, Hicaz, Saba) and six Hindustani ragas (Yaman, Bhairav,
+                Bhairavi, Todi, Marwa, Malkauns) — the makams and ragas include their
+                authentic in-between pitches that a piano cannot play.</td>
+        </tr>
+        <tr>
+            <td class="ctl"><span class="badge">2</span> ROOT</td>
+            <td>The key the scale is built on: <b>C through B</b>. Match it to your song.</td>
+        </tr>
+        <tr>
+            <td class="ctl"><span class="badge">3</span> TEST</td>
+            <td>Plucks each active string in turn, <b>low to high</b>, a couple of seconds
+                each — hear the whole tuning without playing a note. Stops by itself at
+                the last string, or press again to stop early.</td>
+        </tr>
+        <tr>
+            <td class="ctl"><span class="badge">4</span> STEREO</td>
+            <td>How the strings spread across the stereo image. <b>Mono</b> keeps them
+                centred; <b>Linear</b> lays them low-to-left, high-to-right; <b>Wide</b>
+                alternates strings far left and far right. The Narrow variants are the
+                same layouts at half width.</td>
+        </tr>
+        <tr>
+            <td class="ctl"><span class="badge">5</span> 1&ndash;13</td>
+            <td>Fine-tune knobs for the first thirteen strings — nudge individual strings
+                to taste. These are <b>performance tweaks</b>: changing SCALE, ROOT, OCT
+                or N&nbsp;STRINGS retunes everything from scratch and resets them.</td>
+        </tr>
+    </table>
+
+    <h3 class="pb" style="margin-top:0">Knobs</h3>
+    <div class="knob-grid">
+        <div class="knob">
+            <h4><span class="badge">6</span> GATE</h4>
+            <p>Keeps <b>hiss and hum</b> from ringing the strings between phrases.</p>
+            <ul>
+                <li><b>Zero:</b> everything excites the strings, noise included</li>
+                <li><b>Low (default):</b> tames a quiet noise floor</li>
+                <li><b>High:</b> only confident playing gets through — ringing tails
+                    are never cut off, only new excitement</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">7</span> SENS</h4>
+            <p>How <b>easily the strings ring</b>.</p>
+            <ul>
+                <li><b>Low:</b> resonance builds slowly — a faint, distant halo</li>
+                <li><b>Max (default):</b> strings answer your full playing strength</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">8</span> N STRINGS</h4>
+            <p>How many strings ring, counted <b>from the root upward</b> (1&ndash;48).</p>
+            <ul>
+                <li><b>Few:</b> a focused chord of resonance</li>
+                <li><b>13 (default):</b> almost two octaves of scale</li>
+                <li><b>Many:</b> a dense four-octave curtain</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">9</span> OCT</h4>
+            <p>The <b>octave</b> the string bank starts in (2&ndash;6).</p>
+            <ul>
+                <li><b>2:</b> deep drone territory</li>
+                <li><b>3 (default):</b> sits with guitar and voice</li>
+                <li><b>5&ndash;6:</b> strings float above your notes and only their
+                    harmonics ring — pure sparkle</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">10</span> DECAY</h4>
+            <p>How long the strings <b>ring on</b> after you stop.</p>
+            <ul>
+                <li><b>Low:</b> a dry, percussive pluck</li>
+                <li><b>Noon (default):</b> a graceful one-breath fade</li>
+                <li><b>High:</b> minutes-long, nearly a drone</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">11</span> BLOOM</h4>
+            <p>Lets ringing strings <b>excite each other</b> through a shared bridge,
+               the way a real sitar's tarafs do.</p>
+            <ul>
+                <li><b>Off (default):</b> each string rings alone</li>
+                <li><b>High:</b> tails swell and blossom with extra shimmer</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">12</span> JAWARI</h4>
+            <p>The <b>buzzing bridge</b> of a real sitar — a gentle, singing grit on
+               the ringing strings. Adds character, not loudness.</p>
+            <ul>
+                <li><b>Off (default):</b> clean, bell-like ringing</li>
+                <li><b>High:</b> full sitar buzz, tone-tamed so it never turns brittle</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">13</span> MIX</h4>
+            <p>The balance between <b>your dry sound</b> and <b>the strings</b>.
+               Loudness stays even across the whole sweep.</p>
+            <ul>
+                <li><b>Left:</b> dry only</li>
+                <li><b>Right:</b> strings only — play the resonance itself</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">14</span> LEVEL</h4>
+            <p>Output volume trim, <b>&plusmn;12&nbsp;dB</b>, after the mix.</p>
+            <ul>
+                <li>Use it to match the pedal's on/off loudness by ear</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ======================================================= page 5: recipes -->
+<section>
+    <h2>Recipes</h2>
+    <p>Knob positions are given like a clock face: fully left is 7 o'clock, the middle
+       is noon, fully right is 5 o'clock.</p>
+
+    <div class="recipe">
+        <h3>Classic taraf halo</h3>
+        <div class="set"><b>SCALE</b> Major &middot; <b>ROOT</b> your key &middot;
+             <b>N STRINGS</b> noon &middot; <b>OCT</b> 3 &middot; <b>DECAY</b> noon &middot;
+             <b>BLOOM</b> off &middot; <b>JAWARI</b> 9 o'clock &middot; <b>MIX</b> 10 o'clock</div>
+        <p>The real-sitar experience: every phrase you play trails a silver shadow.
+           Fingerpicked guitar practically turns into a different instrument.</p>
+    </div>
+    <div class="recipe">
+        <h3>Shimmer ceiling</h3>
+        <div class="set"><b>OCT</b> 5 &middot; <b>DECAY</b> 1 o'clock &middot;
+             <b>BLOOM</b> noon &middot; <b>JAWARI</b> off &middot; <b>MIX</b> noon &middot;
+             <b>STEREO</b> Wide</div>
+        <p>The strings sit far above your notes, so only their harmonics ring — an airy
+           sparkle floating over everything, close to a shimmer reverb but tuned to
+           your song.</p>
+    </div>
+    <div class="recipe">
+        <h3>Tanpura drone bed</h3>
+        <div class="set"><b>SCALE</b> Raga Yaman &middot; <b>N STRINGS</b> 9 o'clock &middot;
+             <b>DECAY</b> 3 o'clock &middot; <b>BLOOM</b> 1 o'clock &middot;
+             <b>JAWARI</b> noon &middot; <b>MIX</b> 2 o'clock</div>
+        <p>A few strings that barely stop ringing. Play the root and fifth a couple of
+           times to charge them up, then improvise over the drone with your hands free.</p>
+    </div>
+    <div class="recipe">
+        <h3>Microtonal colour</h3>
+        <div class="set"><b>SCALE</b> Hicaz or Saba &middot; <b>ROOT</b> to taste &middot;
+             <b>DECAY</b> noon &middot; <b>JAWARI</b> 10 o'clock &middot; <b>MIX</b> 11 o'clock</div>
+        <p>The makams tune strings to pitches between the piano keys. Press TEST and
+           listen — then play simple lines and let the halo answer with intervals your
+           frets don't have.</p>
+    </div>
+    <div class="recipe">
+        <h3>Subtle studio thickener</h3>
+        <div class="set"><b>MIX</b> 9 o'clock &middot; <b>DECAY</b> 10 o'clock &middot;
+             <b>GATE</b> 2&ndash;3 &middot; <b>STEREO</b> Wide Narrow &middot;
+             <b>LEVEL</b> to match</div>
+        <p>Barely-there resonance that widens and sweetens a part without announcing
+           itself. If you can point at the effect, turn MIX down a hair more.</p>
+    </div>
+
+    <h2 class="pb" style="margin-top:0">Tips</h2>
+    <div class="tips-grid">
+        <div class="tip">
+            <h3>When in doubt, press TEST</h3>
+            <p>After every scale or root change, TEST plays you the exact tuning of the
+               halo. It is the fastest way to learn what the makams and ragas sound like,
+               too.</p>
+        </div>
+        <div class="tip">
+            <h3>Sour halo? Check the key</h3>
+            <p>Strings ring at their own pitches no matter what you play. If the
+               resonance clashes, ROOT or SCALE doesn't match the song. Chromatic scale
+               follows anything — at the cost of focus.</p>
+        </div>
+        <div class="tip">
+            <h3>Raise GATE until the silence is silent</h3>
+            <p>Amp hiss and hum will happily ring the strings all day. Turn GATE up
+               until nothing sounds when you are not playing — tails still ring out in
+               full.</p>
+        </div>
+        <div class="tip">
+            <h3>Fine-tunes are for the moment</h3>
+            <p>The thirteen small knobs detune individual strings — but any SCALE, ROOT,
+               OCT or N&nbsp;STRINGS change retunes the bank from scratch and resets
+               them. Treat them as a live seasoning, not a saved setting.</p>
+        </div>
+        <div class="tip">
+            <h3>Bass in, mud out? Raise OCT</h3>
+            <p>With a bass-heavy source, the low strings can ring into mud. OCT&nbsp;4
+               or 5 moves the whole bank above the muck, keeping just the sheen.</p>
+        </div>
+        <div class="tip">
+            <h3>More strings, same loudness</h3>
+            <p>The pedal balances its own volume as N&nbsp;STRINGS changes — many strings
+               each ring slightly softer, so sweeping the knob never blows up the mix.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================= page 6: installing + Q&A -->
+<section>
+    <h2>Installing Sympathetic Sitar</h2>
+    <p>
+        Download the build for your platform from the
+        <a href="https://github.com/stefdoerr/sitar/releases">GitHub Releases page</a> —
+        each release ships a MOD&nbsp;Desktop bundle
+        (<code>sitar-vX.Y.Z-linux-x86_64.tar.gz</code>) and a MOD&nbsp;Dwarf bundle
+        (<code>sitar-vX.Y.Z-dwarf-aarch64.tar.gz</code>).
+    </p>
+
+    <h3>MOD Desktop (Linux)</h3>
+    <ol class="steps">
+        <li>Extract the archive: <code>tar xzf sitar-vX.Y.Z-linux-x86_64.tar.gz</code></li>
+        <li>Move the extracted <code>sitar.lv2</code> folder into
+            <code>~/Documents/MOD Desktop/lv2/</code></li>
+        <li>Restart MOD Desktop. The pedal appears in the plugin library under the
+            brand <b>sitar</b> as <b>Sympathetic Sitar</b>.</li>
+    </ol>
+
+    <h3>MOD Dwarf</h3>
+    <ol class="steps">
+        <li>Connect the Dwarf over USB and extract the Dwarf archive on your computer.</li>
+        <li>Copy the bundle onto the unit:
+            <pre>scp -O -r sitar.lv2 root@192.168.51.1:/root/.lv2/</pre></li>
+        <li>Restart the audio services (or simply reboot the Dwarf):
+            <pre>ssh root@192.168.51.1 'systemctl restart jack2 mod-ui'</pre></li>
+        <li>Hard-refresh the MOD web interface in your browser
+            (<b>Ctrl-Shift-R</b>) and drag the pedal onto a pedalboard.</li>
+    </ol>
+    <p>
+        Building from source (any LV2 host, macOS/other platforms) is covered in the
+        <a href="https://github.com/stefdoerr/sitar">project README</a>.
+    </p>
+
+    <h2 class="pb" style="margin-top:0">Questions &amp; answers</h2>
+    <dl class="faq">
+        <div class="qa">
+            <dt>The strings ring notes that clash with my song.</dt>
+            <dd>The halo is tuned to SCALE + ROOT, not to what you play. Set ROOT to your
+                song's key and pick the scale you are actually playing in — or choose
+                Chromatic, which contains every note.</dd>
+        </div>
+        <div class="qa">
+            <dt>I hear hardly any resonance.</dt>
+            <dd>Check that MIX is up and SENS is high. If GATE is set high, quiet playing
+                may not be getting through to the strings. And if OCT is 5&ndash;6 with a
+                low-pitched instrument, only faint harmonics reach the strings — bring
+                OCT down.</dd>
+        </div>
+        <div class="qa">
+            <dt>The ringing never seems to stop.</dt>
+            <dd>That is DECAY in its drone range, and BLOOM extends tails further still.
+                Back DECAY down toward noon for song-friendly fades.</dd>
+        </div>
+        <div class="qa">
+            <dt>My fine-tune settings disappeared.</dt>
+            <dd>By design: SCALE, ROOT, OCT and N&nbsp;STRINGS changes — including a
+                pedalboard reload that restores them — retune all strings from scratch.
+                Fine-tunes are a live tweak, not part of the saved sound.</dd>
+        </div>
+        <div class="qa">
+            <dt>Does JAWARI make it louder?</dt>
+            <dd>No — it adds the buzz without changing level. If you want the halo
+                louder, that is MIX; if you want the whole pedal louder, that is LEVEL.</dd>
+        </div>
+    </dl>
+
+    <h2 style="margin-top:16px">Specifications</h2>
+    <table>
+        <tr><th style="width:34%">Format</th><td>LV2 audio plugin, mono in &rarr; stereo out</td></tr>
+        <tr><th>Strings</th><td>Up to 48 tuned resonators spanning four octaves above the root</td></tr>
+        <tr><th>Tunings</th><td>24 scales: 14 Western, 4 Turkish makams, 6 Hindustani ragas
+            (just intonation, with authentic neutral intervals)</td></tr>
+        <tr><th>Root range</th><td>C&ndash;B pitch classes, octaves 2&ndash;6 (C2 &asymp; 65&nbsp;Hz
+            to top strings at C8 &asymp; 4186&nbsp;Hz)</td></tr>
+        <tr><th>Platforms</th><td>MOD Desktop (Linux x86_64), MOD Dwarf (aarch64),
+            any LV2 host</td></tr>
+        <tr><th>License</th><td>ISC (free and open source)</td></tr>
+    </table>
+
+    <p class="credits">
+        Sympathetic Sitar is free software built with the DISTRHO Plugin Framework.
+        Manual edition July 2026 — for the plugin version it shipped with; see the
+        <a href="https://github.com/stefdoerr/sitar/releases">GitHub release page</a>
+        for the latest.
+    </p>
+</section>
+
+</body>
+</html>

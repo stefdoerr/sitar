@@ -84,6 +84,22 @@ install: all
 	@mkdir -p "$(LV2_DIR)"
 	cp -rL "$(BUNDLE)" "$(LV2_DIR)/"
 
+# ---------------------------------------------------------------------------------------------------------------------
+# manual: render the beginner PDF manual from its HTML source via headless
+# Chrome. The PDF is generated output — edit the HTML, re-run this, and
+# commit BOTH files (the release attaches the committed PDF).
+
+MANUAL_HTML := docs/manual/sitar-manual.html
+MANUAL_PDF  := docs/manual/sitar-manual.pdf
+CHROME      ?= google-chrome
+
+manual:
+	$(CHROME) --headless --disable-gpu --no-pdf-header-footer \
+		--print-to-pdf=$(MANUAL_PDF) $(MANUAL_HTML)
+	@echo "==> $(MANUAL_PDF)"
+
+.PHONY: manual
+
 # Convenience shortcuts for the side-by-side beta variant.
 # `make beta`           — build bin/sitar-beta.lv2 (does NOT install)
 # `make install-beta`   — build + copy to MOD Desktop's user-plugin dir
@@ -249,10 +265,11 @@ release:
 	@echo "==> Tagging v$(version)"
 	git tag -a "v$(version)" -m "Release v$(version)"
 	git push origin "v$(version)"
-	@echo "==> Creating GitHub release v$(version) with both bundles attached"
+	@echo "==> Creating GitHub release v$(version) with both bundles + manual attached"
 	gh release create "v$(version)" \
 		"$(DIST_DIR)/$(LINUX_TARBALL)" \
 		"$(DIST_DIR)/$(DWARF_TARBALL)" \
+		"$(MANUAL_PDF)" \
 		--title "v$(version)" \
 		--generate-notes
 	@echo

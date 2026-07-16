@@ -86,6 +86,10 @@ follow whatever you play, harmonized against the scale you pick. The
 
 ## Installation
 
+Each [GitHub release](https://github.com/stefdoerr/sitar/releases) also
+ships a beginner-friendly **PDF manual** (`sitar-manual.pdf`) covering the
+controls, recipes, and installation — no developer knowledge needed.
+
 ### Prerequisites
 
 ```bash
@@ -220,6 +224,8 @@ on the next scan.
 │   ├── modgui/                — MOD pedalboard GUI (HTML/CSS/JS/sprite)
 │   ├── modgui.ttl             — MOD GUI declaration
 │   └── Makefile               — DPF build glue (BETA=1 retags here)
+├── docs/manual/               — beginner PDF manual (HTML source + generated
+│                                PDF; `make manual` re-renders via Chrome)
 ├── dpf/                       — DISTRHO Plugin Framework (git submodule)
 ├── mod-build/                 — Self-contained Dwarf cross-build setup
 │   ├── Dockerfile             — vendored mod-plugin-builder Dockerfile,
