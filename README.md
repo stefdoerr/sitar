@@ -55,9 +55,11 @@ follow whatever you play, harmonized against the scale you pick. The
   and harmonic shimmer; coupling is scaled by the active string count to
   stay stable across all Scale × Decay × N STRINGS combinations.
 * **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
-  buzz of a real sitar's *jawari* bridge. Followed by a ~3.5 kHz
-  one-pole tilt-down LPF (auto-engaged when JAWARI > 0) that tames the
-  brittle top-end harmonics the saturator generates.
+  buzz of a real sitar's *jawari* bridge. Level-neutral: the saturated
+  path is normalized for small-signal unity and blended in by the knob,
+  so JAWARI adds harmonics without boosting the wet level or stepping
+  when it engages. A ~3.5 kHz one-pole tilt-down LPF fades in with the
+  knob to tame the brittle top-end harmonics the saturator generates.
 * **Mix** — equal-power dry/wet crossfade (`dry·cos(mix·π/2) +
   wet·sin(mix·π/2)`) so the output stays at roughly constant power
   across the knob.

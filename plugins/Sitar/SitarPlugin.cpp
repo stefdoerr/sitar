@@ -490,7 +490,16 @@ protected:
             // change, so most "writes" we see are actually echoes — that's
             // fine, we just store and retune.
             fStringFreqs[index] = value;
-            fStringActive[index] = (value >= kMinAllowedHz);
+            const bool active = (value >= kMinAllowedHz);
+            // active→inactive: clear the comb so it doesn't freeze with
+            // ring energy baked in — run() skips inactive combs, so a later
+            // re-activation would otherwise resume the stale ring at the
+            // new tuning. Mirrors the same transition in applyScaleAndRoot.
+            // Retunes while active keep the buffer: sweeping a fine-tune
+            // knob must not kill the ring.
+            if (fStringActive[index] && !active)
+                fCombs[index].clear();
+            fStringActive[index] = active;
             retuneString(index);
             return;
         }
@@ -686,9 +695,16 @@ protected:
         // bus. 10^(dB/20) is the standard amplitude conversion.
         const float levelLin = std::pow(10.0f, fLevel * (1.0f / 20.0f));
 
-        // Jawari drive: 1x to 8x gain into a tanh saturator. Make-up keeps output level roughly steady.
+        // Jawari drive: 1x to 8x gain into a tanh saturator, normalized for
+        // small-signal unity (1/drive) so the knob adds harmonics, not
+        // level. The saturated path is then blended in BY the knob value —
+        // the stage is exactly identity at jawari = 0, so engaging it can't
+        // step the wet level. (The old 1/tanh(drive) make-up normalized at
+        // full scale instead, which boosted realistic sub-unity wet signals
+        // by +2.4 dB the instant the knob left zero and by up to +18 dB at
+        // max drive.)
         const float drive   = 1.0f + jawari * 7.0f;
-        const float makeUp  = 1.0f / std::tanh(drive);
+        const float makeUp  = 1.0f / drive;
 
         // Gate state: when the input envelope drops below the threshold,
         // fGateOpen smoothly approaches 0 and the signal feeding the combs
@@ -781,8 +797,11 @@ protected:
 
                 if (jawari > 0.0f)
                 {
-                    wetL = std::tanh(wetL * drive) * makeUp;
-                    wetR = std::tanh(wetR * drive) * makeUp;
+                    // Same small-signal-unity blend as normal mode below.
+                    const float satL = std::tanh(wetL * drive) * makeUp;
+                    const float satR = std::tanh(wetR * drive) * makeUp;
+                    wetL += jawari * (satL - wetL);
+                    wetR += jawari * (satR - wetR);
                 }
 
                 // Output wet only — pass-through dry would confuse the test.
@@ -844,7 +863,11 @@ protected:
             }
             else
             {
-                fGateOpen = 1.0f;
+                // Gate disabled counts as "above threshold", but the state
+                // still glides through the smoother: zeroing the GATE knob
+                // while the gate is shut must not step the comb feed open
+                // in one sample (audible thump into every active string).
+                fGateOpen += (1.0f - fGateOpen) * fGateSmoothCoef;
             }
 
             const float gatedX = x * fGateOpen;
@@ -897,17 +920,20 @@ protected:
 
             if (jawari > 0.0f)
             {
-                wetL = std::tanh(wetL * drive) * makeUp;
-                wetR = std::tanh(wetR * drive) * makeUp;
+                const float satL = std::tanh(wetL * drive) * makeUp;
+                const float satR = std::tanh(wetR * drive) * makeUp;
+                wetL += jawari * (satL - wetL);
+                wetR += jawari * (satR - wetR);
 
                 // Tilt-down: one-pole LPF at ~3.5 kHz tames the brittle
                 // top-end harmonics jawari's tanh saturation generates. Per
-                // channel so stereo image is preserved. Bypassed when jawari
-                // is off so the dry-ish path stays full-bandwidth.
+                // channel so stereo image is preserved. Blended by the same
+                // knob weight so the cut fades in with the buzz instead of
+                // snapping to full filtering at 0+.
                 fJawariLpfL = fJawariLpfCoef * wetL + (1.0f - fJawariLpfCoef) * fJawariLpfL;
                 fJawariLpfR = fJawariLpfCoef * wetR + (1.0f - fJawariLpfCoef) * fJawariLpfR;
-                wetL = fJawariLpfL;
-                wetR = fJawariLpfR;
+                wetL += jawari * (fJawariLpfL - wetL);
+                wetR += jawari * (fJawariLpfR - wetR);
             }
 
             outL[f] = (dryGain * x + wetGain * wetL) * levelLin;
