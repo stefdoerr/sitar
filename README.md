@@ -39,8 +39,12 @@ follow whatever you play, harmonized against the scale you pick. The
   puts the root at C3 (≈131 Hz); higher octaves leave only upper
   harmonics of the input to excite the strings, for shimmer-only effects.
 * **13 fine-tune knobs** for the first 13 populated string slots — edit
-  them to detune individual strings; SCALE / ROOT / OCT changes recompute
-  from scratch.
+  them to detune individual strings. Detunes are performance tweaks
+  relative to the current scale's pitches: any SCALE / ROOT / OCT /
+  N STRINGS change recomputes them from scratch. That includes reloading
+  a saved pedalboard whose SCALE / ROOT / OCT / N STRINGS differ from the
+  defaults — detunes are deliberately not carried across, since they'd
+  land on different notes.
 * **Decay** with a curve that pushes the audible sustain range into the
   lower half of the knob (knob travel ≈ change in ring time). Capped at
   fb = 0.998 to prevent infinite resonance build-up.

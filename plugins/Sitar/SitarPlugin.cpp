@@ -594,8 +594,10 @@ protected:
             if (idx != fStereoMode)
             {
                 fStereoMode = idx;
-                // Re-derive the pan table for the new mode.
-                applyScaleAndRoot(/*notifyHost=*/ false);
+                // Pan-only change: must not touch the string tunings, or a
+                // user fine-tune would silently revert without the host UI
+                // ever hearing about it.
+                rebuildPanTable();
             }
             break;
         }
@@ -934,41 +936,26 @@ private:
     }
 
     /**
-       Recompute every string_N frequency from the current scale + root.
-       The first 4·notesPerOctave slots get scale-anchored frequencies (root
-       in octave 0 through degree n-1 in octave 3, i.e. 4 octaves up from
-       the root). Any remaining slots get freq = 0 and
-       are marked inactive — that's how a sparser scale (e.g. pentatonic with
-       20 populated slots) tells the wet sum and the bloom bus to skip them.
+       Rebuild the pan table: spread the *effective* (= active and audible)
+       string count across [-width, +width]. The layout (Linear / Wide /
+       Mono) and width come from kStereoModes[fStereoMode].
+         - Linear:      string i -> pos = (2i/(N-1) - 1) * width
+         - Wide:        edges-to-centre alternating; same set of pos
+                        magnitudes, indexed differently
+         - Mono:        pos = 0 for every string (L=R=√½ all the way)
+       Strings beyond effective are silent; their pan gains don't matter
+       but we zero them for cleanliness.
 
-       JS-side scale/root dropdowns just write to the LV2 scale/root_note
-       ports; this function then pushes the recomputed string frequencies
-       back to the host so any generic-UI display stays in sync.
+       Called on its own for stereo-mode changes (pan-only — string tunings
+       must stay untouched) and from applyScaleAndRoot whenever the
+       effective string count may have changed.
      */
-    void applyScaleAndRoot(bool notifyHost)
+    void rebuildPanTable()
     {
-        const ScaleDef& scale  = kScales[fScaleIdx];
-        const float     rootHz = kRootHz[fRootIdx];
-        const uint32_t  n      = scale.notesPerOctave;
-        const uint32_t  populated = kStringRangeOctaves * n;   // e.g. 28 for 7-note, 48 for chromatic
-        // The "effective" count caps NUM by the scale's populated count.
-        // Strings beyond this get freq = 0 and are silent — that way the
-        // UI shows exactly which strings are actually contributing, and
-        // turning NUM down literally zeros the trailing knobs.
-        const uint32_t  effective = fNumActive < populated ? fNumActive : populated;
-        // OCT knob is absolute octave (2..6). Convert to a multiplier relative
-        // to the reference octave at which kRootHz[] is tabulated.
-        const float     octMul = std::pow(2.0f, fOctave - kOctaveRef);
+        const uint32_t n         = kScales[fScaleIdx].notesPerOctave;
+        const uint32_t populated = kStringRangeOctaves * n;
+        const uint32_t effective = fNumActive < populated ? fNumActive : populated;
 
-        // Pan table: spread the *effective* (= active and audible) string
-        // count across [-width, +width]. The layout (Linear / Wide / Mono)
-        // and width come from kStereoModes[fStereoMode].
-        //   - Linear:      string i -> pos = (2i/(N-1) - 1) * width
-        //   - Wide:        edges-to-centre alternating; same set of pos
-        //                  magnitudes, indexed differently
-        //   - Mono:        pos = 0 for every string (L=R=√½ all the way)
-        // Strings beyond effective are silent; their pan gains don't matter
-        // but we zero them for cleanliness.
         const StereoModeDef& smode = kStereoModes[fStereoMode];
         for (uint32_t i = 0; i < kNumStrings; ++i)
         {
@@ -1002,6 +989,36 @@ private:
                 fPanR[i] = 0.0f;
             }
         }
+    }
+
+    /**
+       Recompute every string_N frequency from the current scale + root.
+       The first 4·notesPerOctave slots get scale-anchored frequencies (root
+       in octave 0 through degree n-1 in octave 3, i.e. 4 octaves up from
+       the root). Any remaining slots get freq = 0 and
+       are marked inactive — that's how a sparser scale (e.g. pentatonic with
+       20 populated slots) tells the wet sum and the bloom bus to skip them.
+
+       JS-side scale/root dropdowns just write to the LV2 scale/root_note
+       ports; this function then pushes the recomputed string frequencies
+       back to the host so any generic-UI display stays in sync.
+     */
+    void applyScaleAndRoot(bool notifyHost)
+    {
+        const ScaleDef& scale  = kScales[fScaleIdx];
+        const float     rootHz = kRootHz[fRootIdx];
+        const uint32_t  n      = scale.notesPerOctave;
+        const uint32_t  populated = kStringRangeOctaves * n;   // e.g. 28 for 7-note, 48 for chromatic
+        // The "effective" count caps NUM by the scale's populated count.
+        // Strings beyond this get freq = 0 and are silent — that way the
+        // UI shows exactly which strings are actually contributing, and
+        // turning NUM down literally zeros the trailing knobs.
+        const uint32_t  effective = fNumActive < populated ? fNumActive : populated;
+        // OCT knob is absolute octave (2..6). Convert to a multiplier relative
+        // to the reference octave at which kRootHz[] is tabulated.
+        const float     octMul = std::pow(2.0f, fOctave - kOctaveRef);
+
+        rebuildPanTable();
 
         for (uint32_t i = 0; i < kNumStrings; ++i)
         {

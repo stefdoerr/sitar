@@ -80,6 +80,12 @@ public:
         float readPos = static_cast<float>(fWritePos) - fDelaySamples;
         while (readPos < 0.0f)
             readPos += static_cast<float>(fBufferSize);
+        // The wrap above can round UP to exactly fBufferSize: adding the
+        // buffer size to a tiny negative (delay a hair above an integer,
+        // writePos right at its floor) lands within half an ulp of
+        // fBufferSize, and idx0 would read one past the end of the buffer.
+        if (readPos >= static_cast<float>(fBufferSize))
+            readPos -= static_cast<float>(fBufferSize);
 
         const uint32_t idx0 = static_cast<uint32_t>(readPos);
         const uint32_t idx1 = (idx0 + 1) % fBufferSize;
