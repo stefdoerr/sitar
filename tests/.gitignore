@@ -1,0 +1,4 @@
+# Compiled test binaries — only sources are tracked
+*
+!*.cpp
+!.gitignore
