@@ -226,6 +226,8 @@ on the next scan.
 │   └── Makefile               — DPF build glue (BETA=1 retags here)
 ├── docs/manual/               — beginner PDF manual (HTML source + generated
 │                                PDF; `make manual` re-renders via Chrome)
+├── tests/                     — host-less DSP regression tests (`make test`,
+│                                runs under AddressSanitizer)
 ├── dpf/                       — DISTRHO Plugin Framework (git submodule)
 ├── mod-build/                 — Self-contained Dwarf cross-build setup
 │   ├── Dockerfile             — vendored mod-plugin-builder Dockerfile,

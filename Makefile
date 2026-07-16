@@ -100,6 +100,28 @@ manual:
 
 .PHONY: manual
 
+# ---------------------------------------------------------------------------------------------------------------------
+# test: build + run every tests/test_*.cpp under AddressSanitizer. Each test
+# is a plain main() compiled directly against the plugin source and DPF's
+# core — no host, no test framework. Binaries land in build/tests/
+# (gitignored); each test file's header comment documents what it pins down.
+
+TEST_CXXFLAGS := -std=gnu++14 -g -O0 -fsanitize=address \
+                 -I$(PLUGIN_DIR) -Idpf/distrho
+TEST_SRCS     := $(wildcard $(PLUGIN_DIR)/*.cpp) dpf/distrho/src/DistrhoPlugin.cpp
+
+test:
+	@mkdir -p build/tests
+	@set -e; for t in tests/test_*.cpp; do \
+		bin=build/tests/$$(basename $$t .cpp); \
+		echo "==> $$t"; \
+		g++ $(TEST_CXXFLAGS) $$t $(TEST_SRCS) -o $$bin; \
+		$$bin; \
+	done
+	@echo "==> all tests passed"
+
+.PHONY: test
+
 # Convenience shortcuts for the side-by-side beta variant.
 # `make beta`           — build bin/sitar-beta.lv2 (does NOT install)
 # `make install-beta`   — build + copy to MOD Desktop's user-plugin dir
