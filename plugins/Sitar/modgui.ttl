@@ -10,6 +10,11 @@
         modgui:javascript         <modgui/script-sitar.js> ;
         modgui:screenshot         <modgui/screenshot-sitar.png> ;
         modgui:thumbnail          <modgui/thumbnail-sitar.png> ;
+        # Beginner PDF manual — when declared, mod-ui shows a "documentation"
+        # button in the plugin info dialog. The Makefile's modgui target
+        # copies docs/manual/sitar-manual.pdf into the bundle under this
+        # FIXED name, so renaming the plugin can't break the reference.
+        modgui:documentation      <modgui/manual.pdf> ;
 
         modgui:brand "sitar" ;
         modgui:label "Sympathetic Sitar" ;

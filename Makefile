@@ -50,6 +50,10 @@ modgui: ttl
 	cp -f $(PLUGIN_DIR)/modgui/*.js   $(BUNDLE)/modgui/
 	cp -f $(PLUGIN_DIR)/modgui/*.png  $(BUNDLE)/modgui/
 	cp -rf $(PLUGIN_DIR)/modgui/knobs $(BUNDLE)/modgui/
+	@# Beginner PDF manual -> "documentation" button in the plugin info
+	@# dialog (referenced from modgui.ttl). Copied under a FIXED name so a
+	@# plugin rename can't break the TTL reference.
+	cp -f $(MANUAL_PDF) $(BUNDLE)/modgui/manual.pdf
 	@# Patch the modgui.ttl with the current build's URI / brand / label.
 	@# Source TTL contains the stable identity; sed swaps it out when BETA=1
 	@# (no-op when BETA is unset, since the substitutions become identity).
