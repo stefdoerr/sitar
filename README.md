@@ -290,15 +290,11 @@ bundles are also attached to GitHub releases (via `make release`), with
 
 ## License
 
-The plugin source is released under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
-— effectively public domain, no attribution required. Use it however
-you want.
-
-DPF is ISC-licensed (see [`dpf/LICENSE`](dpf/LICENSE)).
+The plugin source is ISC-licensed. DPF is ISC-licensed (see [`dpf/LICENSE`](dpf/LICENSE)).
 
 The MOD modgui knob sprite at `plugins/Sitar/modgui/knobs/sitar-knob.png`
 is generated procedurally (see `generate_knob.py` in that folder) and is
-also CC0.
+released as CC0 / public domain.
 
 The thumbnail cartoon sitar (`plugins/Sitar/modgui/thumbnail-sitar.png`)
 is **not** CC0 — it's from Flaticon and carries the Flaticon free-license
