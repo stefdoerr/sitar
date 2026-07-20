@@ -100,7 +100,7 @@ sudo apt install build-essential pkg-config git
 ### MOD Desktop (Linux, x86_64)
 
 **Prebuilt bundle** (recommended): grab
-`sitar-vX.Y.Z-linux-x86_64.tar.gz` from the
+`sitar-vX.Y.Z-linux-amd64.tar.gz` from the
 [Releases page](https://github.com/stefdoerr/sitar/releases),
 extract it, and copy the `sitar.lv2/` directory into your MOD Desktop
 plugins directory (default `~/Documents/MOD Desktop/lv2/`). Restart
@@ -253,6 +253,40 @@ MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins BETA=1 ./install.sh
 
 The beta and stable bundles can co-exist on the same host; the beta
 shows up as **"Sitar (Beta)"** under brand **"sitar-beta"**.
+
+## Publishing to Patchstorage
+
+`make patchstorage` cross-builds the plugin for the three targets
+patchstorage.com's LV2-plugins platform supports and publishes it, reusing
+Patchstorage's own prebuilt toolchain images. See
+[`patchstorage-build/README.md`](patchstorage-build/README.md) for details.
+
+| Target | Arch / ABI | glibc |
+|---|---|---|
+| `linux-amd64` | x86-64, SSE2 | 2.27 |
+| `rpi-aarch64` | AArch64 | 2.27 |
+| `patchbox-os-arm32` | 32-bit armhf + NEON hard-float | 2.31 |
+
+**Prerequisites:** Docker, `jq`, and Python 3 with `requests`/`click`/`rdflib`.
+A dedicated env is cleanest — it survives `make clean` (which wipes `build/`):
+
+```bash
+conda create -y -n patchstorage-uploader python=3.12 pip
+conda run -n patchstorage-uploader pip install requests click rdflib
+```
+
+Then `conda activate patchstorage-uploader` before `make`, or pass
+`PYTHON="$(conda run -n patchstorage-uploader which python)"`.
+
+**Targets:**
+- `make patchstorage-build` — build all three bundles into `build/patchstorage/`
+- `make patchstorage-prepare` — assemble + generate metadata for inspection under `build/ps-upload/dist/`
+- `make patchstorage PS_USER=<username>` — build + prepare + publish (prompts for the password; nothing stored)
+
+A modgui **screenshot** must be present in the bundle (Sitar ships one), and the
+repo-root `patchstorage.json` supplies `source_code_url` / `donate_url`. The three
+bundles are also attached to GitHub releases (via `make release`), with
+`linux-amd64` replacing the old `linux-x86_64` asset.
 
 ## License
 
