@@ -288,6 +288,17 @@ repo-root `patchstorage.json` supplies `source_code_url` / `donate_url`. The thr
 bundles are also attached to GitHub releases (via `make release`), with
 `linux-amd64` replacing the old `linux-x86_64` asset.
 
+### Desktop DAW builds (VST3 / CLAP)
+
+Desktop **VST3 + CLAP** binaries for **Linux, Windows, and macOS** are attached to
+each GitHub release automatically by **GitHub Actions**
+(`.github/workflows/desktop-release.yml`, using DISTRHO's `dpf-makefile-action`)
+on every `v*` tag. macOS ships as an **unsigned `.pkg`** (right-click → Open past
+Gatekeeper). These are built in CI because macOS can't be produced on a Linux
+machine and the desktop toolchains are the runners' native ones — MOD Dwarf and
+Patchstorage stay local (`make release`). Desktop LV2 isn't built in CI; the
+desktop-Linux LV2 is the Patchstorage `linux-amd64` asset above.
+
 ## License
 
 The plugin source is ISC-licensed. DPF is ISC-licensed (see [`dpf/LICENSE`](dpf/LICENSE)).
