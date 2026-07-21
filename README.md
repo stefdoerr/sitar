@@ -1,10 +1,11 @@
 # Sympathetic Sitar
 
-A sympathetic-resonance LV2 plugin for [MOD](https://mod.audio) devices
-(MOD Dwarf, MOD Desktop) and any standard LV2 host. Drives up to 48
-tuned feedback comb-filter strings from the input signal to produce
-sitar-like ringing, microtonal accompaniment — the same idea as a real
-sitar's *taraf* (sympathetic strings beneath the frets).
+A sympathetic-resonance plugin — **LV2, VST3, and CLAP** — for
+[MOD](https://mod.audio) devices (MOD Dwarf, MOD Desktop), desktop DAWs on
+Linux / Windows / macOS, and any standard LV2 host. Drives up to 48 tuned
+feedback comb-filter strings from the input signal to produce sitar-like
+ringing, microtonal accompaniment — the same idea as a real sitar's *taraf*
+(sympathetic strings beneath the frets).
 
 ![Pedalboard rendering of the Sympathetic Sitar plugin](plugins/Sitar/modgui/screenshot-sitar.png)
 
@@ -170,6 +171,20 @@ make install PREFIX="$HOME/.lv2" LV2_DIR="$HOME/.lv2"
 The plugin URI is `http://sitar.local/plugins/sitar` — hosts will pick it up
 on the next scan.
 
+### Desktop DAWs — VST3 / CLAP (Linux, Windows, macOS)
+
+**Prebuilt** (recommended): download the VST3/CLAP bundle for your OS from the
+[Releases page](https://github.com/stefdoerr/sitar/releases) and drop it into your
+plugin folder — e.g. `~/.vst3` and `~/.clap` on Linux, `~/Library/Audio/Plug-Ins/VST3`
+and `.../CLAP` on macOS, `%COMMONPROGRAMFILES%\VST3` on Windows. macOS ships as an
+**unsigned `.pkg`** installer (right-click → Open to get past Gatekeeper).
+
+**Or build from source:** `make` produces `bin/sitar.{lv2,vst3,clap}` with your host
+toolchain — copy the `.vst3` / `.clap` into the folders above.
+
+These desktop binaries are built for all three OSes by GitHub Actions and attached to
+each release; MOD Dwarf and Patchstorage builds are produced locally (`make release`).
+
 ## Usage tips
 
 * The plugin is a *resonator*, not a generator: it needs audio in to ring.
@@ -286,18 +301,9 @@ Then `conda activate patchstorage-uploader` before `make`, or pass
 A modgui **screenshot** must be present in the bundle (Sitar ships one), and the
 repo-root `patchstorage.json` supplies `source_code_url` / `donate_url`. The three
 bundles are also attached to GitHub releases (via `make release`), with
-`linux-amd64` replacing the old `linux-x86_64` asset.
-
-### Desktop DAW builds (VST3 / CLAP)
-
-Desktop **VST3 + CLAP** binaries for **Linux, Windows, and macOS** are attached to
-each GitHub release automatically by **GitHub Actions**
-(`.github/workflows/desktop-release.yml`, using DISTRHO's `dpf-makefile-action`)
-on every `v*` tag. macOS ships as an **unsigned `.pkg`** (right-click → Open past
-Gatekeeper). These are built in CI because macOS can't be produced on a Linux
-machine and the desktop toolchains are the runners' native ones — MOD Dwarf and
-Patchstorage stay local (`make release`). Desktop LV2 isn't built in CI; the
-desktop-Linux LV2 is the Patchstorage `linux-amd64` asset above.
+`linux-amd64` replacing the old `linux-x86_64` asset. Desktop **VST3 + CLAP** builds
+for Linux / Windows / macOS are attached to the same releases automatically by GitHub
+Actions — see the *Desktop DAWs* section under [Installation](#installation).
 
 ## License
 
