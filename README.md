@@ -125,7 +125,7 @@ distribution testing), override with:
 MOD_DESKTOP_PLUGINS=/path/to/mod-desktop-X.Y.Z/mod-desktop/plugins ./install.sh
 ```
 
-Restart MOD Desktop and the plugin appears under brand **"sitar"** as
+Restart MOD Desktop and the plugin appears under brand **"Stefan"** as
 **"Sympathetic Sitar"**.
 
 ### MOD Dwarf (hardware, aarch64)
@@ -267,7 +267,7 @@ MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins BETA=1 ./install.sh
 ```
 
 The beta and stable bundles can co-exist on the same host; the beta
-shows up as **"Sitar (Beta)"** under brand **"sitar-beta"**.
+shows up as **"Sitar (Beta)"** under brand **"Stefan"**.
 
 ## Publishing to Patchstorage
 

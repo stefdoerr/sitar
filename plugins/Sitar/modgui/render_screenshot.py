@@ -33,7 +33,7 @@ SPRITE = os.path.join(HERE, "knobs", "sitar-knob.png")
 OUT    = os.path.join(HERE, "screenshot-sitar.png")
 
 WIDTH  = 640
-HEIGHT = 320
+HEIGHT = 220
 
 
 # ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ HEIGHT = 320
 
 # Same values you put in modgui.ttl.
 SUBSTITUTIONS = {
-    "{{brand}}":   "sitar",
+    "{{brand}}":   "Stefan",
     "{{label}}":   "Sympathetic Sitar",
     "{{color}}":   "wood3",
     "{{knob}}":    "gold",
