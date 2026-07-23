@@ -229,7 +229,7 @@ protected:
 
     // All branding methods derive from DistrhoPluginInfo.h, which is the
     // single source of truth for stable-vs-beta identity (see SITAR_BETA).
-    const char* getLabel()       const override { return DISTRHO_PLUGIN_BRAND; }
+    const char* getLabel()       const override { return DISTRHO_PLUGIN_NAME; }
     const char* getDescription() const override
     {
         return "Sympathetic resonance string simulator. Drives up to 48 tuned comb-filter strings spanning "

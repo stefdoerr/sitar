@@ -11,14 +11,14 @@
 // distinct LV2 URI, bundle name, label, and DPF unique-id so it can
 // install side-by-side with the stable plugin for A/B testing.
 #ifdef SITAR_BETA
-#define DISTRHO_PLUGIN_BRAND   "sitar-beta"
+#define DISTRHO_PLUGIN_BRAND   "Stefan"
 #define DISTRHO_PLUGIN_NAME    "Sitar (Beta)"
 #define DISTRHO_PLUGIN_URI     "http://sitar.local/plugins/sitar-beta"
 #define DISTRHO_PLUGIN_CLAP_ID "local.sitar.sitar-beta"
 #define DISTRHO_PLUGIN_BRAND_ID  StBt
 #define DISTRHO_PLUGIN_UNIQUE_ID dStb
 #else
-#define DISTRHO_PLUGIN_BRAND   "sitar"
+#define DISTRHO_PLUGIN_BRAND   "Stefan"
 #define DISTRHO_PLUGIN_NAME    "Sitar"
 #define DISTRHO_PLUGIN_URI     "http://sitar.local/plugins/sitar"
 #define DISTRHO_PLUGIN_CLAP_ID "local.sitar.sitar"
