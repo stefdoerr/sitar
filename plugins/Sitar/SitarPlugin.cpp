@@ -143,11 +143,10 @@ public:
     static constexpr uint32_t kNumStrings        = 48;
     static constexpr uint32_t kStringRangeOctaves = 4;
 
-    // String Hz range bounds the user-facing knob and any scale/root
-    // automation. Lower bound is 0 because un-populated slots (when a
-    // sparser scale than chromatic is selected) are explicitly set to 0
-    // to signal "not used by this scale". Upper bound covers C8 (4186 Hz).
-    static constexpr float kStringMinHz  = 0.0f;
+    // String Hz range bounds internal string computation in applyScaleAndRoot.
+    // Un-populated slots (when a sparser scale than chromatic is selected)
+    // are explicitly set to 0 to signal "not used by this scale". Upper
+    // bound covers C8 (4186 Hz).
     static constexpr float kStringMaxHz  = 4186.01f;
     static constexpr float kMinAllowedHz = 27.5f; // comb filter buffer floor
 
@@ -169,21 +168,19 @@ public:
     static constexpr float kOctaveRef = 3.0f;
 
     enum ParamIndex {
-        kParamString1 = 0,
-        // ... up to kParamString1 + (kNumStrings - 1)
-        kParamNumActive   = kNumStrings,      // 48 — how many strings ring (1..kNumStrings)
-        kParamOctave,                         // 49 — global pitch shift (kOctaveMin..kOctaveMax)
-        kParamDecay,                          // 50
-        kParamMix,                            // 51
-        kParamJawari,                         // 52
-        kParamScale,                          // 53 — enum, selects from kScales[]
-        kParamRootNote,                       // 54 — enum, selects from kRootHz[]
-        kParamAudition,                       // 55 — boolean, "Test Scale" button
-        kParamBloom,                          // 56 — bridge cross-coupling between strings
-        kParamStereoMode,                     // 57 — enum, stereo layout (see kStereoModes[])
-        kParamGate,                           // 58 — input noise gate threshold (0 = off)
-        kParamLevel,                          // 59 — output trim in dB (±12), post-mix
-        kParamSensitivity,                    // 60 — input-trim into comb bank (0..1)
+        kParamNumActive = 0,                  // 0 — how many strings ring (1..kNumStrings)
+        kParamOctave,                         // 1 — global pitch shift (kOctaveMin..kOctaveMax)
+        kParamDecay,                          // 2
+        kParamMix,                            // 3
+        kParamJawari,                         // 4
+        kParamScale,                          // 5 — enum, selects from kScales[]
+        kParamRootNote,                       // 6 — enum, selects from kRootHz[]
+        kParamAudition,                       // 7 — boolean, "Test Scale" button
+        kParamBloom,                          // 8 — bridge cross-coupling between strings
+        kParamStereoMode,                     // 9 — enum, stereo layout (see kStereoModes[])
+        kParamGate,                           // 10 — input noise gate threshold (0 = off)
+        kParamLevel,                          // 11 — output trim in dB (±12), post-mix
+        kParamSensitivity,                    // 12 — input-trim into comb bank (0..1)
         kNumParams
     };
 
@@ -219,11 +216,11 @@ public:
         fRootIdx      = 0;           // C2
 
         sampleRateChanged(getSampleRate());
-        // Seed the string_N values and the pan table from the default scale
-        // + root. We do NOT notify the host here — parameters are queried at
-        // startup via getParameterValue(), and requestParameterValueChange
-        // is not safe before the plugin is registered with the host.
-        applyScaleAndRoot(/*notifyHost=*/ false);
+        // Seed the internal string frequencies and the pan table from the
+        // default scale + root. There are no string_N ports to notify the
+        // host about (strings are fully internal); requestParameterValueChange
+        // is not safe before the plugin is registered with the host anyway.
+        applyScaleAndRoot();
     }
 
 protected:
@@ -278,23 +275,6 @@ protected:
 
     void initParameter(uint32_t index, Parameter& parameter) override
     {
-        if (index < kNumStrings)
-        {
-            char nameBuf[16];
-            std::snprintf(nameBuf, sizeof(nameBuf), "String %u", static_cast<unsigned>(index + 1));
-            char symBuf[16];
-            std::snprintf(symBuf, sizeof(symBuf), "string_%u", static_cast<unsigned>(index + 1));
-
-            parameter.hints      = kParameterIsAutomatable;
-            parameter.name       = nameBuf;
-            parameter.symbol     = symBuf;
-            parameter.unit       = "Hz";
-            parameter.ranges.min = kStringMinHz;
-            parameter.ranges.max = kStringMaxHz;
-            parameter.ranges.def = fStringFreqs[index];
-            return;
-        }
-
         switch (index)
         {
         case kParamNumActive:
@@ -471,7 +451,6 @@ protected:
 
     float getParameterValue(uint32_t index) const override
     {
-        if (index < kNumStrings) return fStringFreqs[index];
         switch (index)
         {
         case kParamNumActive:    return static_cast<float>(fNumActive);
@@ -493,28 +472,6 @@ protected:
 
     void setParameterValue(uint32_t index, float value) override
     {
-        if (index < kNumStrings)
-        {
-            // Per-string ports are user-overridable. Any non-zero value the
-            // user writes is treated as an explicit "play this string at this
-            // frequency"; a write of 0 silences the string. The DSP echoes
-            // these ports via requestParameterValueChange whenever scale/root
-            // change, so most "writes" we see are actually echoes — that's
-            // fine, we just store and retune.
-            fStringFreqs[index] = value;
-            const bool active = (value >= kMinAllowedHz);
-            // active→inactive: clear the comb so it doesn't freeze with
-            // ring energy baked in — run() skips inactive combs, so a later
-            // re-activation would otherwise resume the stale ring at the
-            // new tuning. Mirrors the same transition in applyScaleAndRoot.
-            // Retunes while active keep the buffer: sweeping a fine-tune
-            // knob must not kill the ring.
-            if (fStringActive[index] && !active)
-                fCombs[index].clear();
-            fStringActive[index] = active;
-            retuneString(index);
-            return;
-        }
         switch (index)
         {
         case kParamNumActive:
@@ -528,7 +485,7 @@ protected:
                 fNumActive = newN;
                 // Re-populate so strings beyond NUM zero out in the UI and
                 // strings inside NUM resume their scale-anchored frequencies.
-                applyScaleAndRoot(/*notifyHost=*/ true);
+                applyScaleAndRoot();
             }
             break;
         }
@@ -540,7 +497,7 @@ protected:
             if (o != fOctave)
             {
                 fOctave = o;
-                applyScaleAndRoot(/*notifyHost=*/ true);
+                applyScaleAndRoot();
             }
             break;
         }
@@ -561,7 +518,7 @@ protected:
             if (idx != fScaleIdx)
             {
                 fScaleIdx = idx;
-                applyScaleAndRoot(/*notifyHost=*/ true);
+                applyScaleAndRoot();
             }
             break;
         }
@@ -572,7 +529,7 @@ protected:
             if (idx != fRootIdx)
             {
                 fRootIdx = idx;
-                applyScaleAndRoot(/*notifyHost=*/ true);
+                applyScaleAndRoot();
             }
             break;
         }
@@ -673,7 +630,7 @@ protected:
             sitar::parseUserScales(fUserScales, fUserScaleTable, sitar::kMaxUserScales);
             // If a user slot is the active scale, re-apply so an edit is heard.
             if (fScaleIdx >= kNumScales)
-                applyScaleAndRoot(/*notifyHost=*/ true);
+                applyScaleAndRoot();
         }
     }
 
@@ -1101,10 +1058,10 @@ private:
        20 populated slots) tells the wet sum and the bloom bus to skip them.
 
        JS-side scale/root dropdowns just write to the LV2 scale/root_note
-       ports; this function then pushes the recomputed string frequencies
-       back to the host so any generic-UI display stays in sync.
+       ports; the strings themselves are internal-only (no string_N ports),
+       so there's nothing left to notify the host about here.
      */
-    void applyScaleAndRoot(bool notifyHost)
+    void applyScaleAndRoot()
     {
         const ScaleDef* activeScale = activeScaleDef();
         const float     rootHz = kRootHz[fRootIdx];
@@ -1148,8 +1105,6 @@ private:
             fStringFreqs[i]  = freq;
             fStringActive[i] = active;
             retuneString(i);
-            if (notifyHost)
-                requestParameterValueChange(i, freq);
         }
     }
 

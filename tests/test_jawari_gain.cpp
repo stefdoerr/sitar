@@ -38,9 +38,9 @@ static float wetRmsAtJawari(const float jawari)
 {
     PluginExporter plugin(nullptr, nullptr, recordRequestCallback, nullptr);
 
-    plugin.setParameterValue(51, 1.0f);    // mix: all wet
-    plugin.setParameterValue(52, jawari);  // jawari
-    plugin.setParameterValue(58, 0.0f);    // gate off
+    plugin.setParameterValue(3, 1.0f);     // mix: all wet
+    plugin.setParameterValue(4, jawari);   // jawari
+    plugin.setParameterValue(10, 0.0f);    // gate off
 
     plugin.activate();
 

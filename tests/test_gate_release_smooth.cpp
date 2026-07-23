@@ -42,10 +42,10 @@ int main()
 
     PluginExporter plugin(nullptr, nullptr, recordRequestCallback, nullptr);
 
-    plugin.setParameterValue(48, 1.0f);    // num_active: only string 1
-    plugin.setParameterValue(50, 0.0f);    // decay 0 -> comb is a pure delay
-    plugin.setParameterValue(51, 1.0f);    // mix: all wet
-    plugin.setParameterValue(58, 10.0f);   // gate threshold 0.02 linear
+    plugin.setParameterValue(0, 1.0f);     // num_active: only string 1
+    plugin.setParameterValue(2, 0.0f);     // decay: comb is a pure delay
+    plugin.setParameterValue(3, 1.0f);     // mix: all wet
+    plugin.setParameterValue(10, 10.0f);   // gate threshold 0.02 linear
 
     plugin.activate();
 
@@ -79,7 +79,7 @@ int main()
     }
 
     // Switch the gate off and capture the output that follows.
-    plugin.setParameterValue(58, 0.0f);
+    plugin.setParameterValue(10, 0.0f);    // gate
 
     std::vector<float> captured;
     for (uint32_t b = 0; b < 8; ++b)
