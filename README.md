@@ -17,7 +17,7 @@ energy at (or near) the string's frequency or one of its harmonics. The
 result is a shimmering, slowly-decaying halo of pitched overtones that
 follow whatever you play, harmonized against the scale you pick. The
 48-string bank spans roughly four octaves above the root, and
-`N STRINGS` cursors over how many of them ring at once.
+`STRINGS` cursors over how many of them ring at once.
 
 ### Features
 
@@ -25,7 +25,7 @@ follow whatever you play, harmonized against the scale you pick. The
   fractional-delay tuning, per-string damping, and an in-loop tanh
   saturator so a single string can't dominate when its resonance
   frequency is excited
-* **N STRINGS** knob (1–48) — picks how many strings ring at once,
+* **STRINGS** knob (1–48) — picks how many strings ring at once,
   starting from the root upward through the scale
 * **Scale + Root selectors** (LV2 enum parameters — also appear in the
   cogwheel settings of any LV2 host)
@@ -42,8 +42,8 @@ follow whatever you play, harmonized against the scale you pick. The
 * **13 fine-tune knobs** for the first 13 populated string slots — edit
   them to detune individual strings. Detunes are performance tweaks
   relative to the current scale's pitches: any SCALE / ROOT / OCT /
-  N STRINGS change recomputes them from scratch. That includes reloading
-  a saved pedalboard whose SCALE / ROOT / OCT / N STRINGS differ from the
+  STRINGS change recomputes them from scratch. That includes reloading
+  a saved pedalboard whose SCALE / ROOT / OCT / STRINGS differ from the
   defaults — detunes are deliberately not carried across, since they'd
   land on different notes.
 * **Decay** with a curve that pushes the audible sustain range into the
@@ -54,7 +54,7 @@ follow whatever you play, harmonized against the scale you pick. The
   tanh-saturated bus, mirroring how a real sitar's *tarafs* share one
   physical bridge and excite each other. Adds a subtle ring extension
   and harmonic shimmer; coupling is scaled by the active string count to
-  stay stable across all Scale × Decay × N STRINGS combinations.
+  stay stable across all Scale × Decay × STRINGS combinations.
 * **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
   buzz of a real sitar's *jawari* bridge. Level-neutral: the saturated
   path is normalized for small-signal unity and blended in by the knob,
@@ -189,7 +189,7 @@ each release; MOD Dwarf and Patchstorage builds are produced locally (`make rele
 
 * The plugin is a *resonator*, not a generator: it needs audio in to ring.
   Pluck a guitar, hum into a mic, or feed a synth into it.
-* **N STRINGS** at 13 (default) covers a single octave of a 7-note scale
+* **STRINGS** at 13 (default) covers a single octave of a 7-note scale
   or two octaves of a pentatonic. Push to 28+ for the full 4-octave
   span, or drop to 4-7 for a sparse tambura-style drone.
 * **OCT** at 3 (default) puts the root at C3-ish; OCT 5–6 leaves only the
@@ -259,7 +259,7 @@ each release; MOD Dwarf and Patchstorage builds are produced locally (`make rele
 ### Side-by-side beta builds
 
 For A/B testing, the same source can be built as a second plugin with a
-distinct URI / brand / unique-id by setting `BETA=1`:
+distinct URI / unique-id by setting `BETA=1`:
 
 ```bash
 make beta                                    # builds bin/sitar-beta.lv2

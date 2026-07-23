@@ -20,7 +20,7 @@ PLUGIN_URI_BASE := http://sitar.local/plugins
 # ---------------------------------------------------------------------------
 
 # Set BETA=1 to produce a side-by-side beta build: distinct LV2 URI,
-# bundle name, brand, and unique id. Same source, different identity —
+# bundle name, and unique id. Same source, different identity —
 # install with `make BETA=1 install` (or the `make beta` shortcut) and
 # it'll coexist with the stable plugin in MOD Desktop. The conditional
 # <PLUGIN_UPPER>_BETA macro (here SITAR_BETA) is exported to the DPF
@@ -105,7 +105,7 @@ modgui: ttl
 	@# dialog (referenced from modgui.ttl). Copied under a FIXED name so a
 	@# plugin rename can't break the TTL reference.
 	cp -f $(MANUAL_PDF) $(BUNDLE)/modgui/manual.pdf
-	@# Patch the modgui.ttl with the current build's URI / brand / label.
+	@# Patch the modgui.ttl with the current build's URI / label.
 	@# Source TTL contains the stable identity; sed swaps it out when BETA=1
 	@# (no-op when BETA is unset, since the substitutions become identity).
 	sed -e 's|$(PLUGIN_URI_BASE)/$(PLUGIN)|$(PLUGIN_URI)|g' \
