@@ -85,6 +85,11 @@
                 <span class="sitar-test-icon">&#9654;</span>
             </div>
         </div>
+
+        <div class="sitar-field">
+            <span class="sitar-field-label">SCALES</span>
+            <div class="sitar-editbtn" mod-role="sitar-edit-open" title="Edit user scales">&#9998;</div>
+        </div>
     </div>
 
     <!-- Knob row grouped by signal path: Input · Pitch · Resonance · Output -->
@@ -150,11 +155,23 @@
         </div>
     </div>
 
-    <!-- PHASE-1 SPIKE: throwaway text field to validate the "userscales"
-         patch string round-trip + persistence on device. Bound in
-         script-sitar.js; removed when the real scale editor lands. -->
-    <input class="sitar-spike-input" type="text" mod-role="sitar-spike"
-           placeholder="spike: user scales string" />
+    <!-- User-scale editor overlay (hidden until opened) -->
+    <div class="sitar-editor" mod-role="sitar-editor" style="display:none;">
+        <div class="sitar-editor-row">
+            <span class="sitar-editor-title">USER SCALES</span>
+            <div class="sitar-editor-close" mod-role="sitar-edit-close">&#10005;</div>
+        </div>
+        <div class="sitar-editor-row">
+            <select class="sitar-select" mod-role="sitar-edit-slot"></select>
+            <input class="sitar-editor-name" mod-role="sitar-edit-name" type="text" placeholder="scale name" />
+        </div>
+        <input class="sitar-editor-ivals" mod-role="sitar-edit-ivals" type="text"
+               placeholder="intervals: 9/8, 347.4, 4/3, 3/2 …  (ratios or cents)" />
+        <div class="sitar-editor-row">
+            <div class="sitar-editor-btn" mod-role="sitar-edit-save">Save</div>
+            <div class="sitar-editor-btn" mod-role="sitar-edit-clear">Clear slot</div>
+        </div>
+    </div>
 
     <!-- Audio I/O — required structure for pedalboard connections -->
     <div class="mod-pedal-input">
