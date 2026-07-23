@@ -106,6 +106,13 @@
     flex-direction: row;
     align-items: center;
     gap: 6px;
+    /* The Scale/Root/Stereo fields are <label>s while the Test field is a
+       <div>. MOD Desktop's global bootstrap sets label{margin-bottom:5px;
+       font-weight:700}, which in this centred flex row nudges the <label>
+       fields up (leaving the Test button sitting low) and bolds only their
+       captions. Neutralise both so every field aligns and matches weight. */
+    margin: 0;
+    font-weight: normal;
 }
 .sitar-pedal .sitar-field-label {
     font-size: 9px;
@@ -265,7 +272,17 @@
 }
 
 /* ============================ Audio I/O jacks ============================
-   No overrides — MOD-UI positions/styles the jacks at fixed offsets. If the
-   lower stereo output jack overhangs this shorter frame, raise .sitar-pedal
-   height (and render_screenshot.py HEIGHT) together rather than nudging the
-   jacks (nudging drifts the cable endpoint off the visual plug). */
+   MOD-UI pins the jack containers at top:106px and stacks their children
+   downward (each .mod-audio-{input,output} is 56px tall, 13px between). On
+   this compact 220px pedal that leaves the input jack below-centre and pushes
+   the lower output jack off the bottom edge. Re-centre them vertically on the
+   pedal — Y ONLY: we don't touch MOD's default left:-88 / right:-87, so the
+   plugs (and the cable endpoints MOD derives from their rendered position)
+   stay put horizontally.
+
+   Math (pedal height 220 -> centre 110; jack 56px tall; 13px gap):
+     input  (1 jack) : top = 110 - 56/2                   = 82px
+     output (2 jacks): stack = 2*56 + 13 = 125; top = 110 - 125/2 = 47.5 -> 48px
+   Recompute these if .sitar-pedal height or the input/output port count changes. */
+.sitar-pedal .mod-pedal-input  { top: 82px; }
+.sitar-pedal .mod-pedal-output { top: 48px; }
