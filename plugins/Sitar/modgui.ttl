@@ -16,7 +16,7 @@
         # FIXED name, so renaming the plugin can't break the reference.
         modgui:documentation      <modgui/manual.pdf> ;
 
-        modgui:brand "sitar" ;
+        modgui:brand "Stefan" ;
         modgui:label "Sympathetic Sitar" ;
         modgui:model "boxy" ;
         modgui:panel "3-knob" ;

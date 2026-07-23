@@ -14,7 +14,7 @@
 #              over HTTP, but keep it unique across vendors).
 PLUGIN          := sitar
 PLUGIN_DIR      := plugins/Sitar
-BRAND           := sitar
+BRAND           := Stefan
 LABEL           := Sympathetic Sitar
 PLUGIN_URI_BASE := http://sitar.local/plugins
 # ---------------------------------------------------------------------------
@@ -109,7 +109,6 @@ modgui: ttl
 	@# Source TTL contains the stable identity; sed swaps it out when BETA=1
 	@# (no-op when BETA is unset, since the substitutions become identity).
 	sed -e 's|$(PLUGIN_URI_BASE)/$(PLUGIN)|$(PLUGIN_URI)|g' \
-	    -e 's|modgui:brand "$(BRAND)"|modgui:brand "$(BUNDLE_NAME)"|' \
 	    -e 's|modgui:label "$(LABEL)"|modgui:label "$(BUNDLE_LABEL)"|' \
 	    $(PLUGIN_DIR)/modgui.ttl > $(BUNDLE)/modgui.ttl
 	@if ! grep -q 'modgui.ttl' $(BUNDLE)/manifest.ttl; then \
