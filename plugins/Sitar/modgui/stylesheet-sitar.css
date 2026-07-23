@@ -1,26 +1,21 @@
 /*
  * Sitar Sympathetic Resonance — MOD pedal stylesheet.
  *
- * Conventions:
- *   - The pedal MUST be position:absolute with a fixed pixel width/height —
- *     MOD's pedalboard places pedals at absolute coordinates on the board.
- *   - All custom elements inside the pedal are absolutely positioned so the
- *     layout doesn't reflow when MOD's framework injects its own visuals
- *     (audio jacks, knob images, bypass light/footswitch).
- *   - We let MOD-UI provide the default visuals for .mod-input / .mod-output
- *     (audio jacks), .mod-knob-image (rotary knobs), .mod-light, and
- *     .mod-footswitch. We only override their positions.
+ *   - The pedal is position:absolute with a fixed pixel width/height (MOD
+ *     places pedals at absolute board coordinates).
+ *   - Custom bands inside the pedal are absolutely positioned so MOD's
+ *     injected visuals (jacks, knob images, bypass light/footswitch) don't
+ *     reflow them. MOD provides the default visuals for .mod-input/.mod-output,
+ *     .mod-knob-image, .mod-light, .mod-footswitch; we only place them.
+ *
+ * NOTE: .sitar-pedal height must stay in sync with HEIGHT in
+ * modgui/render_screenshot.py.
  */
 
-/* ============================ Pedal frame ============================
-   The pedal must NOT have overflow:hidden — MOD-UI positions the audio jacks
-   *outside* the pedal frame (left:-88px / right:-88px by default), and clipping
-   them would hide the cable endpoints. The wood-grain texture is baked into
-   the multi-layer `background` shorthand so it's still clipped by border-radius
-   without needing overflow:hidden. */
+/* ============================ Pedal frame ============================ */
 .sitar-pedal {
     width: 640px;
-    height: 320px;
+    height: 220px;
     position: absolute;
     border-radius: 14px;
     background:
@@ -41,8 +36,6 @@
     font-family: "nexa", "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-/* Drag handle covers the whole pedal so it can be dragged anywhere on it.
-   Lives behind all interactive controls (z-index 0) so they remain clickable. */
 .sitar-pedal .mod-drag-handle {
     position: absolute;
     inset: 0;
@@ -50,12 +43,10 @@
     cursor: move;
 }
 
-/* All interactive controls sit above the drag handle. */
 .sitar-pedal .mod-plugin-brand,
 .sitar-pedal .mod-plugin-name,
 .sitar-pedal .sitar-scale-bar,
-.sitar-pedal .sitar-strings,
-.sitar-pedal .sitar-tone,
+.sitar-pedal .sitar-sections,
 .sitar-pedal .mod-light,
 .sitar-pedal .mod-footswitch,
 .sitar-pedal .mod-pedal-input,
@@ -80,7 +71,6 @@
     color: rgba(245, 217, 154, 0.7);
     font-weight: 400;
 }
-
 .sitar-pedal .mod-plugin-name {
     position: absolute;
     top: 26px;
@@ -99,28 +89,29 @@
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
 
-/* ============================ Scale bar ============================ */
+/* ============================ Selector bar (inline labels) ============================ */
 .sitar-pedal .sitar-scale-bar {
     position: absolute;
-    top: 58px;
-    left: 40px;
-    right: 40px;
-    height: 40px;
+    top: 54px;
+    left: 24px;
+    right: 24px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 18px;
+    gap: 14px;
 }
 .sitar-pedal .sitar-field {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 2px;
+    gap: 6px;
 }
 .sitar-pedal .sitar-field-label {
     font-size: 9px;
-    letter-spacing: 0.2em;
-    color: rgba(245, 217, 154, 0.7);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(245, 217, 154, 0.65);
 }
 .sitar-pedal .sitar-select {
     background: #1c0e07;
@@ -130,17 +121,13 @@
     padding: 3px 6px;
     font-size: 11px;
     font-family: inherit;
-    min-width: 130px;
+    min-width: 118px;
     outline: none;
     cursor: pointer;
 }
 .sitar-pedal .sitar-select:hover { border-color: #f5d99a; }
-.sitar-pedal .sitar-octave-field .sitar-knob-octave { margin-top: 1px; }
 
-/* "Test Scale" button — sequentially plucks each string for ~1s. */
-.sitar-pedal .sitar-test-field {
-    align-items: center;
-}
+/* "Test Scale" button — sequentially plucks each string. */
 .sitar-pedal .sitar-test-btn {
     width: 28px;
     height: 28px;
@@ -166,7 +153,6 @@
         0 1px 3px rgba(0, 0, 0, 0.7);
 }
 .sitar-pedal .sitar-test-btn.on {
-    /* Lit-up state while the audition is running. */
     background: radial-gradient(circle at 30% 30%, #ffd55a, #d27a14 70%, #6e3a04);
     box-shadow:
         inset 0 1px 2px rgba(0, 0, 0, 0.3),
@@ -176,21 +162,11 @@
 .sitar-pedal .sitar-test-icon {
     font-size: 11px;
     line-height: 1;
-    margin-left: 1px; /* optical centering for the triangle */
+    margin-left: 1px;
 }
 
-/* ============================ Knob sprite ============================
-   MOD-UI's film_strip widget reads .mod-knob-image's CSS background-image and
-   rotates through frames by setting background-position-x at runtime. Each
-   knob must therefore declare:
-     - background-image: url(...)  (a horizontal strip of square frames)
-     - background-size: auto Npx   (frame height in px; sets visible size)
-     - width / height               (display size; should match background-size)
-   The same sprite is reused at different sizes for strings / tone / octave. */
+/* ============================ Knob sprite ============================ */
 .sitar-pedal .mod-knob-image {
-    /* The /resources/ path is served by MOD-UI's EffectResource handler;
-       the {{{ns}}} Mustache var (= ?uri=<plugin-uri>&v=<version>) scopes the
-       request to this plugin's modgui directory. */
     background-image: url(/resources/knobs/sitar-knob.png{{{ns}}});
     background-repeat: no-repeat;
     background-position: left center;
@@ -198,101 +174,57 @@
     cursor: pointer;
 }
 
-/* ============================ Strings row ============================ */
-.sitar-pedal .sitar-strings {
+/* ============================ Sectioned knob row ============================ */
+.sitar-pedal .sitar-sections {
     position: absolute;
-    top: 108px;
-    left: 56px;
-    right: 56px;
-    height: 90px;
-    display: grid;
-    grid-template-columns: repeat(13, 1fr);
-    align-items: start;
-    gap: 0;
-    padding: 8px 4px 6px 4px;
-    background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.12));
-    border-radius: 8px;
-    border: 1px solid rgba(245, 217, 154, 0.12);
-    box-sizing: border-box;
-}
-.sitar-pedal .sitar-string {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-}
-.sitar-pedal .sitar-knob-string {
-    width: 32px;
-    height: 32px;
-}
-.sitar-pedal .sitar-knob-string .mod-knob-image {
-    width: 32px;
-    height: 32px;
-    background-size: auto 32px;
-}
-.sitar-pedal .sitar-string-num {
-    font-size: 10px;
-    color: rgba(245, 217, 154, 0.7);
-    line-height: 1;
-}
-
-/* ============================ Tone knobs ============================ */
-.sitar-pedal .sitar-tone {
-    position: absolute;
-    bottom: 22px;
+    top: 98px;
     left: 0;
     right: 0;
-    height: 72px;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* 9 knobs (GATE / SENS / N STRINGS / OCT / DECAY / BLOOM / JAWARI / MIX
-       / LEVEL) in 640 px, each 56 px wide. 9×56 + 8×gap must fit inside
-       the pedal frame without touching the audio-jack rails; gap = 8 px
-       yields 9·56 + 8·8 = 568 px → ~36 px clearance per side. */
-    gap: 8px;
+}
+.sitar-pedal .sitar-sec {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+}
+.sitar-pedal .sitar-sec + .sitar-sec {
+    border-left: 1px solid rgba(245, 217, 154, 0.13);
+}
+.sitar-pedal .sitar-sec-title {
+    font-size: 8.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 217, 154, 0.5);
+}
+.sitar-pedal .sitar-sec-knobs {
+    display: flex;
+    gap: 10px;
 }
 .sitar-pedal .sitar-knob-tone {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 3px;
-    width: 56px;
+    width: 52px;
 }
 .sitar-pedal .sitar-knob-tone .mod-knob-image {
-    width: 50px;
-    height: 50px;
-    background-size: auto 50px;
+    width: 46px;
+    height: 46px;
+    background-size: auto 46px;
 }
 .sitar-pedal .sitar-knob-tone .mod-knob-title {
-    font-size: 10px;
-    letter-spacing: 0.18em;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
     color: rgba(245, 217, 154, 0.85);
-}
-
-/* ============================ Octave knob (in the scale bar) ============================ */
-.sitar-pedal .sitar-knob-octave {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    width: 32px;
-}
-.sitar-pedal .sitar-knob-octave .mod-knob-image {
-    width: 28px;
-    height: 28px;
-    background-size: auto 28px;
-}
-.sitar-pedal .sitar-knob-octave .mod-knob-value {
-    font-size: 10px;
-    color: #f5d99a;
     text-align: center;
+    line-height: 1.15;
 }
 
-/* ============================ Bypass light + footswitch ============================
-   We don't ship our own footswitch graphics, so we draw simple CSS-only visuals.
-   MOD-UI toggles the .on class on .mod-light and .mod-footswitch when bypass state
-   changes — we style both states. */
+/* ============================ Bypass light + footswitch ============================ */
 .sitar-pedal .mod-light {
     position: absolute;
     bottom: 12px;
@@ -310,7 +242,6 @@
         inset 0 1px 2px rgba(0, 0, 0, 0.3),
         0 0 8px rgba(255, 180, 60, 0.7);
 }
-
 .sitar-pedal .mod-footswitch {
     position: absolute;
     bottom: 8px;
@@ -334,13 +265,7 @@
 }
 
 /* ============================ Audio I/O jacks ============================
-   No overrides. MOD-UI's pedals.css + dashboard.css fully styles and
-   positions the jacks (left:-87px / right:-87px, top:106px, 56 px tall
-   with 13 px margin-bottom between siblings, jack visuals from the
-   bundled PNG sprites). Its drag handler computes cable endpoints
-   against those exact defaults — any custom top/margin we apply
-   re-introduces drift between the cable end and the visual plug.
-
-   If the jack stack ends up vertically off-centre on a tall custom
-   pedal, the right fix is to RESIZE the pedal to a standard MOD
-   pedal height (~160-220 px), NOT to nudge the jacks. */
+   No overrides — MOD-UI positions/styles the jacks at fixed offsets. If the
+   lower stereo output jack overhangs this shorter frame, raise .sitar-pedal
+   height (and render_screenshot.py HEIGHT) together rather than nudging the
+   jacks (nudging drifts the cable endpoint off the visual plug). */

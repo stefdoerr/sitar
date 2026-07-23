@@ -9,7 +9,7 @@
     <div class="mod-light on" mod-role="bypass-light"></div>
     <div class="mod-footswitch" mod-role="bypass"></div>
 
-    <!-- Scale + Root selects (pure JS, not bound to LV2 ports) -->
+    <!-- Scale + Root + Stereo selects (JS-bound via mod-role) and the Test button -->
     <div class="sitar-scale-bar">
         <label class="sitar-field">
             <span class="sitar-field-label">SCALE</span>
@@ -65,16 +65,6 @@
             </select>
         </label>
 
-        <div class="sitar-field sitar-test-field">
-            <span class="sitar-field-label">TEST</span>
-            <div class="sitar-test-btn mod-toggle off"
-                 mod-role="input-control-port"
-                 mod-port-symbol="audition"
-                 mod-widget="switch">
-                <span class="sitar-test-icon">&#9654;</span>
-            </div>
-        </div>
-
         <label class="sitar-field">
             <span class="sitar-field-label">STEREO</span>
             <select class="sitar-select" mod-role="sitar-stereo">
@@ -86,130 +76,77 @@
             </select>
         </label>
 
-    </div>
-
-    <!-- Fine-tune knobs for the first 13 string slots. These are always
-         scale-populated (the sparsest scale we support, pentatonic, fills
-         20 slots). Editing a knob retunes that string until the next
-         SCALE/ROOT change, which recomputes from scratch. -->
-    <div class="sitar-strings">
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_1"></div>
+        <div class="sitar-field sitar-test-field">
+            <span class="sitar-field-label">TEST</span>
+            <div class="sitar-test-btn mod-toggle off"
+                 mod-role="input-control-port"
+                 mod-port-symbol="audition"
+                 mod-widget="switch">
+                <span class="sitar-test-icon">&#9654;</span>
             </div>
-            <span class="sitar-string-num">1</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_2"></div>
-            </div>
-            <span class="sitar-string-num">2</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_3"></div>
-            </div>
-            <span class="sitar-string-num">3</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_4"></div>
-            </div>
-            <span class="sitar-string-num">4</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_5"></div>
-            </div>
-            <span class="sitar-string-num">5</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_6"></div>
-            </div>
-            <span class="sitar-string-num">6</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_7"></div>
-            </div>
-            <span class="sitar-string-num">7</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_8"></div>
-            </div>
-            <span class="sitar-string-num">8</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_9"></div>
-            </div>
-            <span class="sitar-string-num">9</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_10"></div>
-            </div>
-            <span class="sitar-string-num">10</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_11"></div>
-            </div>
-            <span class="sitar-string-num">11</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_12"></div>
-            </div>
-            <span class="sitar-string-num">12</span>
-        </div>
-        <div class="sitar-string">
-            <div class="mod-knob sitar-knob-string">
-                <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="string_13"></div>
-            </div>
-            <span class="sitar-string-num">13</span>
         </div>
     </div>
 
-    <!-- Tone knobs: GATE / SENS / N STRINGS / OCT / DECAY / BLOOM / JAWARI / MIX / LEVEL -->
-    <div class="sitar-tone">
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="gate"></div>
-            <span class="mod-knob-title">GATE</span>
+    <!-- Knob row grouped by signal path: Input · Pitch · Resonance · Output -->
+    <div class="sitar-sections">
+        <div class="sitar-sec">
+            <span class="sitar-sec-title">Input</span>
+            <div class="sitar-sec-knobs">
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="gate"></div>
+                    <span class="mod-knob-title">GATE</span>
+                </div>
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="sensitivity"></div>
+                    <span class="mod-knob-title">SENS</span>
+                </div>
+            </div>
         </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="sensitivity"></div>
-            <span class="mod-knob-title">SENS</span>
+
+        <div class="sitar-sec">
+            <span class="sitar-sec-title">Pitch</span>
+            <div class="sitar-sec-knobs">
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="num_active"></div>
+                    <span class="mod-knob-title">STRINGS</span>
+                </div>
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="octave"></div>
+                    <span class="mod-knob-title">OCT</span>
+                </div>
+            </div>
         </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="num_active"></div>
-            <span class="mod-knob-title">N STRINGS</span>
+
+        <div class="sitar-sec">
+            <span class="sitar-sec-title">Resonance</span>
+            <div class="sitar-sec-knobs">
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="decay"></div>
+                    <span class="mod-knob-title">DECAY</span>
+                </div>
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="bloom"></div>
+                    <span class="mod-knob-title">BLOOM</span>
+                </div>
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="jawari"></div>
+                    <span class="mod-knob-title">JAWARI</span>
+                </div>
+            </div>
         </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="octave"></div>
-            <span class="mod-knob-title">OCT</span>
-        </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="decay"></div>
-            <span class="mod-knob-title">DECAY</span>
-        </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="bloom"></div>
-            <span class="mod-knob-title">BLOOM</span>
-        </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="jawari"></div>
-            <span class="mod-knob-title">JAWARI</span>
-        </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="mix"></div>
-            <span class="mod-knob-title">MIX</span>
-        </div>
-        <div class="mod-knob sitar-knob-tone">
-            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="level"></div>
-            <span class="mod-knob-title">LEVEL</span>
+
+        <div class="sitar-sec">
+            <span class="sitar-sec-title">Output</span>
+            <div class="sitar-sec-knobs">
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="mix"></div>
+                    <span class="mod-knob-title">MIX</span>
+                </div>
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="level"></div>
+                    <span class="mod-knob-title">LEVEL</span>
+                </div>
+            </div>
         </div>
     </div>
 
