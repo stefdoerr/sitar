@@ -79,6 +79,25 @@ function (event, funcs) {
             if (icon.data('sitar-suppress-emit')) return;
             funcs.set_port_value('stereo_mode', stereoKeyToIndex(this.value));
         });
+
+        // PHASE-1 SPIKE: prove the modgui<->DSP string round-trip + persistence
+        // for the "userscales" patch parameter. Discover its URI from the
+        // parameters list (robust across stable/beta builds), seed the field
+        // with the current value, and write on edit. Throwaway — replaced by
+        // the real scale editor once the channel is validated on device.
+        var $spike = icon.find('[mod-role="sitar-spike"]');
+        var scalesUri = null;
+        (event.parameters || []).forEach(function (p) {
+            if (p && p.uri && p.uri.indexOf('#userscales') !== -1) {
+                scalesUri = p.uri;
+                if (p.value != null) $spike.val(p.value);
+            }
+        });
+        icon.data('sitar-userscales-uri', scalesUri);
+        $spike.on('change', function () {
+            var uri = icon.data('sitar-userscales-uri');
+            if (uri) funcs.patch_set(uri, 's', this.value);
+        });
         return;
     }
 
@@ -88,6 +107,15 @@ function (event, funcs) {
         // via jQuery does NOT fire a 'change' event, so this won't loop back
         // to our handler, but we set a guard flag anyway to be safe.
         var icon = event.icon;
+
+        // SPIKE: an incoming value for the "userscales" patch parameter arrives
+        // as a 'change' event carrying a `uri` (not a port `symbol`).
+        if (event.uri && event.uri.indexOf('#userscales') !== -1)
+        {
+            icon.find('[mod-role="sitar-spike"]').val(event.value != null ? event.value : '');
+            return;
+        }
+
         if (event.symbol === 'scale')
         {
             var idx = Math.round(event.value) | 0;

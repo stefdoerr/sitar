@@ -41,7 +41,11 @@
 #define DISTRHO_PLUGIN_NUM_INPUTS     1
 #define DISTRHO_PLUGIN_NUM_OUTPUTS    2
 #define DISTRHO_PLUGIN_WANT_PROGRAMS                          0
-#define DISTRHO_PLUGIN_WANT_STATE                             0
+// State holds the user-defined scale library (a host-writable string the MOD
+// modgui reads/writes via LV2 patch). FULL_STATE lets the host query it back
+// on save so it persists in the pedalboard/preset.
+#define DISTRHO_PLUGIN_WANT_STATE                             1
+#define DISTRHO_PLUGIN_WANT_FULL_STATE                        1
 #define DISTRHO_PLUGIN_WANT_PARAMETER_VALUE_CHANGE_REQUEST    1
 
 #endif // DISTRHO_PLUGIN_INFO_H_INCLUDED

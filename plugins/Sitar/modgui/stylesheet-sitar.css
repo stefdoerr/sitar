@@ -286,3 +286,23 @@
    Recompute these if .sitar-pedal height or the input/output port count changes. */
 .sitar-pedal .mod-pedal-input  { top: 82px; }
 .sitar-pedal .mod-pedal-output { top: 48px; }
+
+/* PHASE-1 SPIKE: throwaway input to validate the "userscales" patch string
+   round-trip + persistence on device. Sits along the bottom edge, clear of
+   the bypass light/footswitch. Remove together with the spike. */
+.sitar-pedal .sitar-spike-input {
+    position: absolute;
+    bottom: 4px;
+    left: 96px;
+    right: 14px;
+    height: 15px;
+    z-index: 1;
+    background: #1c0e07;
+    color: #f5d99a;
+    border: 1px solid rgba(245, 217, 154, 0.35);
+    border-radius: 3px;
+    padding: 0 5px;
+    font-size: 9px;
+    font-family: inherit;
+    outline: none;
+}

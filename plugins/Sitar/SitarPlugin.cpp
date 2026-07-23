@@ -18,6 +18,7 @@
 #include "CombFilter.hpp"
 
 #include <cmath>
+#include <cstring>
 
 START_NAMESPACE_DISTRHO
 
@@ -201,7 +202,7 @@ public:
     static constexpr float kBridgeDcAlpha = 0.996f;
 
     SitarPlugin()
-        : Plugin(kNumParams, 0, 0)
+        : Plugin(kNumParams, 0, 1)   // 1 state: the user-scale library (see initState)
     {
         fNumActive    = 13;          // pick a musical default below 48
         fOctave       = kOctaveRef;  // default = octave 3 (C3 if root=C)
@@ -636,6 +637,37 @@ protected:
             fSensitivity = value;
             break;
         }
+    }
+
+    // ---------------- State (custom user scales) ----------------
+    // One host-writable string state holds the user-defined scale library,
+    // serialized as one scale per line ("Name | i1, i2, ..."). The MOD modgui
+    // reads/writes it via LV2 patch (patch_get / patch_set); MOD persists it in
+    // the pedalboard/preset. PHASE-1 SPIKE: store + round-trip only — parsing
+    // the library into playable scales comes in a later phase.
+
+    void initState(uint32_t index, State& state) override
+    {
+        if (index == 0)
+        {
+            state.key          = "userscales";
+            state.label        = "User Scales";
+            state.hints        = kStateIsHostWritable;
+            state.defaultValue = "";
+        }
+    }
+
+    String getState(const char* key) const override
+    {
+        if (std::strcmp(key, "userscales") == 0)
+            return fUserScales;
+        return String();
+    }
+
+    void setState(const char* key, const char* value) override
+    {
+        if (std::strcmp(key, "userscales") == 0)
+            fUserScales = value;
     }
 
     // ---------------- Lifecycle ----------------
@@ -1194,6 +1226,10 @@ private:
 
     uint32_t fScaleIdx = 0;
     uint32_t fRootIdx  = 0;
+
+    // Serialized user-scale library — the host-writable "userscales" state.
+    // Spike: stored/round-tripped only; parsed into scales in a later phase.
+    String fUserScales;
 
     // Audition (Test Scale): plucks each string in turn for 1s so the user
     // can hear the pitch of every degree of the current scale.

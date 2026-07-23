@@ -150,6 +150,12 @@
         </div>
     </div>
 
+    <!-- PHASE-1 SPIKE: throwaway text field to validate the "userscales"
+         patch string round-trip + persistence on device. Bound in
+         script-sitar.js; removed when the real scale editor lands. -->
+    <input class="sitar-spike-input" type="text" mod-role="sitar-spike"
+           placeholder="spike: user scales string" />
+
     <!-- Audio I/O — required structure for pedalboard connections -->
     <div class="mod-pedal-input">
         {{#effect.ports.audio.input}}
