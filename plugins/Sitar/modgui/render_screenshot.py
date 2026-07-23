@@ -31,9 +31,15 @@ ICON   = os.path.join(HERE, "icon-sitar.html")
 STYLE  = os.path.join(HERE, "stylesheet-sitar.css")
 SPRITE = os.path.join(HERE, "knobs", "sitar-knob.png")
 OUT    = os.path.join(HERE, "screenshot-sitar.png")
+OUT_EDITOR = os.path.join(HERE, "screenshot-editor.png")
 
 WIDTH  = 640
 HEIGHT = 220
+
+# SITAR_EDITOR=1 renders the user-scale editor overlay (open + populated with an
+# example scale) to screenshot-editor.png instead of the closed face. Used by
+# the beginner manual's "Make your own scale" page.
+EDITOR = bool(os.environ.get("SITAR_EDITOR"))
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +121,21 @@ def main():
     css        = render_stylesheet(css, sprite_url)
     pedal_html = render_template(icon_html)
 
+    if EDITOR:
+        # No modgui JS here, so open + populate the overlay by hand for the shot.
+        pedal_html = pedal_html.replace(
+            'mod-role="sitar-editor" style="display:none;"',
+            'mod-role="sitar-editor" style="display:flex;"')
+        pedal_html = pedal_html.replace(
+            'mod-role="sitar-edit-slot"></select>',
+            'mod-role="sitar-edit-slot"><option>User 1</option></select>')
+        pedal_html = pedal_html.replace(
+            'mod-role="sitar-edit-name" type="text"',
+            'mod-role="sitar-edit-name" type="text" value="My Rast"')
+        pedal_html = pedal_html.replace(
+            'mod-role="sitar-edit-ivals" type="text"',
+            'mod-role="sitar-edit-ivals" type="text" value="9/8, 347.4, 4/3, 3/2, 27/16, 1049.0"')
+
     page = f"""<!doctype html>
 <html><head>
 <meta charset="utf-8">
@@ -152,8 +173,9 @@ def main():
             tab.screenshot(path=tmp_out, omit_background=False, full_page=False)
             browser.close()
 
-        shutil.copyfile(tmp_out, OUT)
-        print(f"Wrote {OUT} ({WIDTH}x{HEIGHT}, rendered by headless Chromium)")
+        out = OUT_EDITOR if EDITOR else OUT
+        shutil.copyfile(tmp_out, out)
+        print(f"Wrote {out} ({WIDTH}x{HEIGHT}, rendered by headless Chromium)")
 
 
 if __name__ == "__main__":

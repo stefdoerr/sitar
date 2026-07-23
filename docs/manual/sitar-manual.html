@@ -377,7 +377,8 @@ a { color: var(--gold-d); text-decoration: none; }
                 (major, minors, modes, pentatonics, blues&nbsp;&hellip;), four Turkish makams
                 (Rast, U&#351;&#351;ak, Hicaz, Saba) and six Hindustani ragas (Yaman, Bhairav,
                 Bhairavi, Todi, Marwa, Malkauns) — the makams and ragas include their
-                authentic in-between pitches that a piano cannot play.</td>
+                authentic in-between pitches that a piano cannot play &mdash; plus
+                any you build yourself (see <i>Make your own scale</i>).</td>
         </tr>
         <tr>
             <td class="ctl"><span class="badge">2</span> ROOT</td>
@@ -483,6 +484,45 @@ a { color: var(--gold-d); text-decoration: none; }
     </div>
 </section>
 
+<!-- ================================================ page 4: make your own scale -->
+<section>
+    <h2>Make your own scale</h2>
+    <p>The 24 built-in scales cover a lot of ground &mdash; but you can also
+       define <b>your own</b>, with any intervals you like, including the
+       microtonal pitches between the piano keys. Custom scales are saved with
+       your pedalboard.</p>
+
+    <div class="pedal-map">
+        <img src="../../plugins/Sitar/modgui/screenshot-editor.png"
+             alt="The User Scales editor, opened from the pencil button">
+    </div>
+
+    <ol class="steps">
+        <li>Click the <b>pencil</b> (&#9998;) in the pedal's <b>top-right corner</b>
+            to open the <b>User Scales</b> editor.</li>
+        <li>Pick a <b>slot</b> (User&nbsp;1&ndash;8) and type a <b>name</b>.</li>
+        <li>Enter the <b>intervals</b> separated by commas. Each is either a
+            <b>ratio</b> such as <code>9/8</code> or <code>3/2</code>, or a value
+            in <b>cents</b> &mdash; a number with a decimal point, such as
+            <code>347.4</code>. The root (<code>1/1</code>) is added for you, so
+            just list the notes above it.</li>
+        <li>Press <b>Save</b>. Your scale now appears in the <b>SCALE</b> menu
+            under <b>User</b>; select it like any other scale, and press
+            <b>TEST</b> to hear the tuning.</li>
+    </ol>
+
+    <div class="note">
+        <b>Ratios or cents?</b> Ratios are exact just-intonation, ideal for
+        harmonic tunings and for matching a raga or makam by ear. Cents match how
+        most tuning tables and theory tools write intervals &mdash; you can mix
+        both in the same scale.
+    </div>
+
+    <p>To change a scale, reopen the editor, choose its slot, edit and
+       <b>Save</b> again; <b>Clear slot</b> removes it. Custom scales live in the
+       pedalboard &mdash; save a MOD preset to carry one between projects.</p>
+</section>
+
 <!-- ======================================================= page 5: recipes -->
 <section>
     <h2>Recipes</h2>
@@ -552,11 +592,10 @@ a { color: var(--gold-d); text-decoration: none; }
                full.</p>
         </div>
         <div class="tip">
-            <h3>Per-string tuning is advanced</h3>
-            <p>Each string's exact pitch can be nudged in your host's <b>gear / detailed
-               view</b>, not on the pedal face. Treat these as a live seasoning: any
-               SCALE, ROOT, OCT or STRINGS change retunes the bank from scratch and
-               resets them.</p>
+            <h3>Roll your own tuning</h3>
+            <p>Beyond the 24 presets, the pencil (&#9998;) editor in the top-right
+               corner builds <b>custom microtonal scales</b> from ratios or cents
+               &mdash; see <i>Make your own scale</i>. They save with the pedalboard.</p>
         </div>
         <div class="tip">
             <h3>Bass in, mud out? Raise OCT</h3>
@@ -627,11 +666,12 @@ a { color: var(--gold-d); text-decoration: none; }
                 Back DECAY down toward noon for song-friendly fades.</dd>
         </div>
         <div class="qa">
-            <dt>My per-string tuning disappeared.</dt>
-            <dd>By design: SCALE, ROOT, OCT and STRINGS changes — including a pedalboard
-                reload that restores them — retune all strings from scratch. The
-                per-string nudges in the host's gear view are a live tweak, not part of
-                the saved sound.</dd>
+            <dt>Can I make my own scale?</dt>
+            <dd>Yes — click the pencil (&#9998;) in the pedal's top-right corner to
+                open the User Scales editor, enter the intervals as ratios (like
+                <code>3/2</code>) or cents (like <code>347.4</code>), and Save. It
+                joins the SCALE menu under &ldquo;User&rdquo; and is stored with
+                your pedalboard. See <i>Make your own scale</i>.</dd>
         </div>
         <div class="qa">
             <dt>Does JAWARI make it louder?</dt>

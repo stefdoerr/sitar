@@ -39,13 +39,12 @@ follow whatever you play, harmonized against the scale you pick. The
 * **OCT** (2–6) — absolute octave for the root pitch class. Default 3
   puts the root at C3 (≈131 Hz); higher octaves leave only upper
   harmonics of the input to excite the strings, for shimmer-only effects.
-* **13 fine-tune knobs** for the first 13 populated string slots — edit
-  them to detune individual strings. Detunes are performance tweaks
-  relative to the current scale's pitches: any SCALE / ROOT / OCT /
-  STRINGS change recomputes them from scratch. That includes reloading
-  a saved pedalboard whose SCALE / ROOT / OCT / STRINGS differ from the
-  defaults — detunes are deliberately not carried across, since they'd
-  land on different notes.
+* **Custom scales** — beyond the built-ins, define your own microtonal
+  tuning (ratios like `3/2` or cents like `347.4`) in the pedal's scale
+  editor (the ✎ button). Up to 8 user scales, saved with the pedalboard;
+  they appear in the SCALE menu alongside the presets. Per-string
+  frequencies are computed internally — there are no per-string knobs or
+  ports to manage. See the manual's *Make your own scale*.
 * **Decay** with a curve that pushes the audible sustain range into the
   lower half of the knob (knob travel ≈ change in ring time). Capped at
   fb = 0.998 to prevent infinite resonance build-up.
