@@ -167,20 +167,27 @@ public:
     // fOctave when computing the per-string Hz multiplier.
     static constexpr float kOctaveRef = 3.0f;
 
+    // Order mirrors the modgui face so the host's gear/detailed view lists the
+    // params in the same order the user sees on the pedal: selector bar
+    // (Scale · Root · Stereo · Test), then the knob row Input (Gate · Sens) ·
+    // Pitch (Strings · Oct) · Resonance (Decay · Bloom · Jawari) · Output
+    // (Mix · Level). Ports are keyed by symbol in state/automation, so this
+    // index order is display-only and safe to change. The switch cases below
+    // match by enum name and need not be reordered.
     enum ParamIndex {
-        kParamNumActive = 0,                  // 0 — how many strings ring (1..kNumStrings)
-        kParamOctave,                         // 1 — global pitch shift (kOctaveMin..kOctaveMax)
-        kParamDecay,                          // 2
-        kParamMix,                            // 3
-        kParamJawari,                         // 4
-        kParamScale,                          // 5 — enum, selects from kScales[]
-        kParamRootNote,                       // 6 — enum, selects from kRootHz[]
-        kParamAudition,                       // 7 — boolean, "Test Scale" button
-        kParamBloom,                          // 8 — bridge cross-coupling between strings
-        kParamStereoMode,                     // 9 — enum, stereo layout (see kStereoModes[])
-        kParamGate,                           // 10 — input noise gate threshold (0 = off)
-        kParamLevel,                          // 11 — output trim in dB (±12), post-mix
-        kParamSensitivity,                    // 12 — input-trim into comb bank (0..1)
+        kParamScale = 0,                      // enum, selects from kScales[] / user slots
+        kParamRootNote,                       // enum, selects from kRootHz[]
+        kParamStereoMode,                     // enum, stereo layout (see kStereoModes[])
+        kParamAudition,                       // boolean, "Test Scale" button
+        kParamGate,                           // input noise gate threshold (0 = off)
+        kParamSensitivity,                    // input-trim into comb bank (0..1)
+        kParamNumActive,                      // how many strings ring (1..kNumStrings)
+        kParamOctave,                         // global pitch shift (kOctaveMin..kOctaveMax)
+        kParamDecay,
+        kParamBloom,                          // bridge cross-coupling between strings
+        kParamJawari,
+        kParamMix,
+        kParamLevel,                          // output trim in dB (±12), post-mix
         kNumParams
     };
 

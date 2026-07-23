@@ -22,6 +22,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <vector>
 
 USE_NAMESPACE_DISTRHO
@@ -31,6 +32,16 @@ static bool recordRequestCallback(void*, uint32_t, float)
     return true;
 }
 
+// Resolve a parameter index by symbol so the test is immune to param-index
+// reordering.
+static uint32_t idx(PluginExporter& p, const char* sym)
+{
+    for (uint32_t i = 0; i < p.getParameterCount(); ++i)
+        if (std::strcmp(p.getParameterSymbol(i), sym) == 0) return i;
+    std::printf("FAIL: no param symbol '%s'\n", sym);
+    return 0;
+}
+
 // Steady-state wet RMS with everything else held constant: drive string 1
 // (root C3, 130.81 Hz) with a quiet sine at its resonant frequency, let the
 // resonance build up, then measure the last quarter of the run.
@@ -38,9 +49,9 @@ static float wetRmsAtJawari(const float jawari)
 {
     PluginExporter plugin(nullptr, nullptr, recordRequestCallback, nullptr);
 
-    plugin.setParameterValue(3, 1.0f);     // mix: all wet
-    plugin.setParameterValue(4, jawari);   // jawari
-    plugin.setParameterValue(10, 0.0f);    // gate off
+    plugin.setParameterValue(idx(plugin, "mix"),    1.0f);     // all wet
+    plugin.setParameterValue(idx(plugin, "jawari"), jawari);   // jawari
+    plugin.setParameterValue(idx(plugin, "gate"),   0.0f);     // gate off
 
     plugin.activate();
 

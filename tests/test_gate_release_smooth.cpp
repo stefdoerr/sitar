@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <vector>
 
 USE_NAMESPACE_DISTRHO
@@ -32,6 +33,16 @@ USE_NAMESPACE_DISTRHO
 static bool recordRequestCallback(void*, uint32_t, float)
 {
     return true;
+}
+
+// Resolve a parameter index by symbol so the test is immune to param-index
+// reordering.
+static uint32_t idx(PluginExporter& p, const char* sym)
+{
+    for (uint32_t i = 0; i < p.getParameterCount(); ++i)
+        if (std::strcmp(p.getParameterSymbol(i), sym) == 0) return i;
+    std::printf("FAIL: no param symbol '%s'\n", sym);
+    return 0;
 }
 
 int main()
@@ -42,10 +53,10 @@ int main()
 
     PluginExporter plugin(nullptr, nullptr, recordRequestCallback, nullptr);
 
-    plugin.setParameterValue(0, 1.0f);     // num_active: only string 1
-    plugin.setParameterValue(2, 0.0f);     // decay: comb is a pure delay
-    plugin.setParameterValue(3, 1.0f);     // mix: all wet
-    plugin.setParameterValue(10, 10.0f);   // gate threshold 0.02 linear
+    plugin.setParameterValue(idx(plugin, "num_active"),  1.0f);   // only string 1
+    plugin.setParameterValue(idx(plugin, "decay"),       0.0f);   // comb is a pure delay
+    plugin.setParameterValue(idx(plugin, "mix"),         1.0f);   // all wet
+    plugin.setParameterValue(idx(plugin, "gate"),       10.0f);   // gate threshold 0.02 linear
 
     plugin.activate();
 
@@ -79,7 +90,7 @@ int main()
     }
 
     // Switch the gate off and capture the output that follows.
-    plugin.setParameterValue(10, 0.0f);    // gate
+    plugin.setParameterValue(idx(plugin, "gate"), 0.0f);   // disable the gate
 
     std::vector<float> captured;
     for (uint32_t b = 0; b < 8; ++b)
