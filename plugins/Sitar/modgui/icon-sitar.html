@@ -5,6 +5,9 @@
     <div class="mod-plugin-brand"><h1>{{brand}}</h1></div>
     <div class="mod-plugin-name"><h1>{{label}}</h1></div>
 
+    <!-- User-scale editor trigger (top-right corner; JS binds it by mod-role) -->
+    <div class="sitar-editbtn" mod-role="sitar-edit-open" title="Edit user scales">&#9998;</div>
+
     <!-- Bypass light + footswitch (required by MOD pedalboard) -->
     <div class="mod-light on" mod-role="bypass-light"></div>
     <div class="mod-footswitch" mod-role="bypass"></div>
@@ -84,11 +87,6 @@
                  mod-widget="switch">
                 <span class="sitar-test-icon">&#9654;</span>
             </div>
-        </div>
-
-        <div class="sitar-field">
-            <span class="sitar-field-label">SCALES</span>
-            <div class="sitar-editbtn" mod-role="sitar-edit-open" title="Edit user scales">&#9998;</div>
         </div>
     </div>
 
