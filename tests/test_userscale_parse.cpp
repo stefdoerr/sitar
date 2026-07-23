@@ -41,6 +41,9 @@ int main()
     istrue("leading space ok",   parseInterval("  5/4", r));  near("sp 5/4", r, 1.25f);
     istrue("empty rejected",    !parseInterval("", r));
     istrue("garbage rejected",  !parseInterval("abc", r));
+    istrue("dot-only rejected",   !parseInterval(".", r));
+    istrue("dotword rejected",    !parseInterval("abc.xyz", r));
+    istrue("decimal cents ok",     parseInterval(".5", r));
     istrue("zero denom rejected",!parseInterval("1/0", r));
     istrue("zero int rejected",  !parseInterval("0", r));
 

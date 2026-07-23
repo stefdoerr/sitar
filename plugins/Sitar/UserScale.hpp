@@ -35,6 +35,7 @@ struct UserScale {
 // leaves ratioOut untouched for empty / unparseable / non-positive tokens.
 inline bool parseInterval(const char* tok, float& ratioOut)
 {
+    if (tok == nullptr) return false;
     while (*tok == ' ' || *tok == '\t') ++tok;
     if (*tok == '\0') return false;
 
@@ -46,12 +47,12 @@ inline bool parseInterval(const char* tok, float& ratioOut)
         ratioOut = static_cast<float>(num / den);
         return true;
     }
-    if (std::strchr(tok, '.') != nullptr)              // cents
+    if (std::strchr(tok, '.') != nullptr)              // cents (has a decimal point)
     {
-        const double cents = std::atof(tok);
-        const float  ratio = static_cast<float>(std::pow(2.0, cents / 1200.0));
-        if (ratio <= 0.0f) return false;
-        ratioOut = ratio;
+        char* end = nullptr;
+        const double cents = std::strtod(tok, &end);
+        if (end == tok) return false;                  // no number parsed ("." / "abc.xyz")
+        ratioOut = static_cast<float>(std::pow(2.0, cents / 1200.0));
         return true;
     }
     const double n = std::atof(tok);                   // bare int -> n/1
