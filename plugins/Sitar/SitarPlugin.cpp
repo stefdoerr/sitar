@@ -16,6 +16,7 @@
 
 #include "DistrhoPlugin.hpp"
 #include "CombFilter.hpp"
+#include "UserScale.hpp"
 
 #include <cmath>
 #include <cstring>
@@ -347,16 +348,16 @@ protected:
             parameter.name       = "Scale";
             parameter.symbol     = "scale";
             parameter.ranges.min = 0.0f;
-            parameter.ranges.max = static_cast<float>(kNumScales - 1);
+            parameter.ranges.max = static_cast<float>(kNumSelectableScales - 1);
             parameter.ranges.def = 0.0f;
-            parameter.enumValues.count          = static_cast<uint8_t>(kNumScales);
+            parameter.enumValues.count          = static_cast<uint8_t>(kNumSelectableScales);
             parameter.enumValues.restrictedMode = true;
-            ParameterEnumerationValue* const ev = new ParameterEnumerationValue[kNumScales];
-            for (uint32_t i = 0; i < kNumScales; ++i)
-            {
-                ev[i].value = static_cast<float>(i);
-                ev[i].label = kScales[i].label;
-            }
+            ParameterEnumerationValue* const ev = new ParameterEnumerationValue[kNumSelectableScales];
+            for (uint32_t i = 0; i < kNumScales; ++i) { ev[i].value = (float) i; ev[i].label = kScales[i].label; }
+            static const char* const kUserLabels[8] =
+                { "User 1","User 2","User 3","User 4","User 5","User 6","User 7","User 8" };
+            for (uint32_t i = 0; i < sitar::kMaxUserScales; ++i)
+                { ev[kNumScales+i].value = (float)(kNumScales+i); ev[kNumScales+i].label = kUserLabels[i]; }
             parameter.enumValues.values = ev;
             break;
         }
@@ -556,7 +557,7 @@ protected:
         case kParamScale:
         {
             uint32_t idx = static_cast<uint32_t>(value + 0.5f);
-            if (idx >= kNumScales) idx = kNumScales - 1;
+            if (idx >= kNumSelectableScales) idx = kNumSelectableScales - 1;
             if (idx != fScaleIdx)
             {
                 fScaleIdx = idx;
@@ -667,7 +668,13 @@ protected:
     void setState(const char* key, const char* value) override
     {
         if (std::strcmp(key, "userscales") == 0)
+        {
             fUserScales = value;
+            sitar::parseUserScales(fUserScales, fUserScaleTable, sitar::kMaxUserScales);
+            // If a user slot is the active scale, re-apply so an edit is heard.
+            if (fScaleIdx >= kNumScales)
+                applyScaleAndRoot(/*notifyHost=*/ true);
+        }
     }
 
     // ---------------- Lifecycle ----------------
@@ -1020,7 +1027,8 @@ private:
      */
     void rebuildPanTable()
     {
-        const uint32_t n         = kScales[fScaleIdx].notesPerOctave;
+        const ScaleDef* activeScale = activeScaleDef();
+        const uint32_t n         = (activeScale != nullptr) ? activeScale->notesPerOctave : 0;
         const uint32_t populated = kStringRangeOctaves * n;
         const uint32_t effective = fNumActive < populated ? fNumActive : populated;
 
@@ -1059,6 +1067,31 @@ private:
         }
     }
 
+    // Total selectable scales = built-ins + user slots.
+    static constexpr uint32_t kNumSelectableScales = kNumScales + sitar::kMaxUserScales;
+
+    // Scratch ScaleDef for the active user slot (label unused by the DSP math).
+    ScaleDef fUserScaleDef {};
+
+    // Returns the ScaleDef for the current fScaleIdx, or nullptr if it points
+    // at an empty user slot (→ no populated strings).
+    const ScaleDef* activeScaleDef()
+    {
+        if (fScaleIdx < kNumScales)
+            return &kScales[fScaleIdx];
+
+        const uint32_t slot = fScaleIdx - kNumScales;
+        if (slot >= sitar::kMaxUserScales || !fUserScaleTable[slot].valid)
+            return nullptr;
+
+        const sitar::UserScale& u = fUserScaleTable[slot];
+        fUserScaleDef.label          = "User";
+        fUserScaleDef.notesPerOctave = u.notesPerOctave;
+        for (uint32_t i = 0; i < u.notesPerOctave && i < 12; ++i)
+            fUserScaleDef.ratios[i] = u.ratios[i];
+        return &fUserScaleDef;
+    }
+
     /**
        Recompute every string_N frequency from the current scale + root.
        The first 4·notesPerOctave slots get scale-anchored frequencies (root
@@ -1073,9 +1106,10 @@ private:
      */
     void applyScaleAndRoot(bool notifyHost)
     {
-        const ScaleDef& scale  = kScales[fScaleIdx];
+        const ScaleDef* activeScale = activeScaleDef();
         const float     rootHz = kRootHz[fRootIdx];
-        const uint32_t  n      = scale.notesPerOctave;
+        // Empty user slot → nothing rings until the user saves a scale to it.
+        const uint32_t  n = (activeScale != nullptr) ? activeScale->notesPerOctave : 0;
         const uint32_t  populated = kStringRangeOctaves * n;   // e.g. 28 for 7-note, 48 for chromatic
         // The "effective" count caps NUM by the scale's populated count.
         // Strings beyond this get freq = 0 and are silent — that way the
@@ -1093,11 +1127,11 @@ private:
             float freq = 0.0f;
             bool  active = false;
 
-            if (i < effective)
+            if (i < effective && activeScale != nullptr)
             {
                 const uint32_t scaleIdx = i % n;
                 const uint32_t octaves  = i / n;
-                freq = rootHz * scale.ratios[scaleIdx]
+                freq = rootHz * activeScale->ratios[scaleIdx]
                               * std::pow(2.0f, static_cast<float>(octaves))
                               * octMul;
                 if (freq > kStringMaxHz) freq = kStringMaxHz;
@@ -1230,6 +1264,10 @@ private:
     // Serialized user-scale library — the host-writable "userscales" state.
     // Spike: stored/round-tripped only; parsed into scales in a later phase.
     String fUserScales;
+
+    // Parsed user-scale library (from the "userscales" state). Slot i is
+    // selectable as SCALE index kNumScales + i.
+    sitar::UserScale fUserScaleTable[sitar::kMaxUserScales] {};
 
     // Audition (Test Scale): plucks each string in turn for 1s so the user
     // can hear the pitch of every degree of the current scale.
