@@ -8,10 +8,9 @@
  * notes per octave, only the first 4·notesPerOctave string slots are
  * populated; the remaining slots get freq = 0 and are silent.
  *
- * The user-facing UI surfaces two cursor knobs into this 48-string set:
- *   - NUM  STRINGS: how many strings ring simultaneously (1-48)
- *   - OFFSET:       index of the first ringing string (0-47)
- * with "clip if past the populated count" semantics.
+ * The strings are tuned internally from the SCALE / ROOT / OCT controls — 24
+ * built-in scales plus up to 8 user-defined scales (see UserScale.hpp) — and
+ * the STRINGS knob cursors how many of the populated slots ring at once.
  */
 
 #include "DistrhoPlugin.hpp"
@@ -341,6 +340,7 @@ protected:
             parameter.enumValues.restrictedMode = true;
             ParameterEnumerationValue* const ev = new ParameterEnumerationValue[kNumSelectableScales];
             for (uint32_t i = 0; i < kNumScales; ++i) { ev[i].value = (float) i; ev[i].label = kScales[i].label; }
+            static_assert(sitar::kMaxUserScales == 8, "kUserLabels must match kMaxUserScales");
             static const char* const kUserLabels[8] =
                 { "User 1","User 2","User 3","User 4","User 5","User 6","User 7","User 8" };
             for (uint32_t i = 0; i < sitar::kMaxUserScales; ++i)
@@ -608,8 +608,8 @@ protected:
     // One host-writable string state holds the user-defined scale library,
     // serialized as one scale per line ("Name | i1, i2, ..."). The MOD modgui
     // reads/writes it via LV2 patch (patch_get / patch_set); MOD persists it in
-    // the pedalboard/preset. PHASE-1 SPIKE: store + round-trip only — parsing
-    // the library into playable scales comes in a later phase.
+    // the pedalboard/preset. setState() parses it into fUserScaleTable and, when
+    // a user slot is the active scale, re-applies so an edit is heard at once.
 
     void initState(uint32_t index, State& state) override
     {
@@ -1057,7 +1057,7 @@ private:
     }
 
     /**
-       Recompute every string_N frequency from the current scale + root.
+       Recompute every string's frequency from the current scale + root.
        The first 4·notesPerOctave slots get scale-anchored frequencies (root
        in octave 0 through degree n-1 in octave 3, i.e. 4 octaves up from
        the root). Any remaining slots get freq = 0 and
@@ -1224,7 +1224,7 @@ private:
     uint32_t fRootIdx  = 0;
 
     // Serialized user-scale library — the host-writable "userscales" state.
-    // Spike: stored/round-tripped only; parsed into scales in a later phase.
+    // Parsed into fUserScaleTable in setState().
     String fUserScales;
 
     // Parsed user-scale library (from the "userscales" state). Slot i is
