@@ -84,105 +84,59 @@ follow whatever you play, harmonized against the scale you pick. The
   audio jack rendering; renders correctly in MOD Desktop and on Dwarf
   hardware
 
-## Installation
+## Install
 
-Each [GitHub release](https://github.com/stefdoerr/sitar/releases) also
-ships a beginner-friendly **PDF manual** (`sitar-manual.pdf`) covering the
-controls, recipes, and installation — no developer knowledge needed.
+Every release ships ready-to-run bundles — **no build tools, no developer
+setup**. Grab the latest for your platform from the
+**[Releases page](https://github.com/stefdoerr/sitar/releases/latest)** and
+follow the matching steps below. Each release also includes a beginner-friendly
+**PDF manual** (`sitar-manual.pdf`) covering the controls and recipes.
 
-### Prerequisites
+> Replace `X.Y.Z` below with the version you downloaded (e.g. `0.2.0`). The
+> plugin always appears under brand **Stefan** as **Sympathetic Sitar**.
 
-```bash
-# Debian / Ubuntu
-sudo apt install build-essential pkg-config git
-```
+### MOD Desktop (Linux)
 
-### MOD Desktop (Linux, x86_64)
-
-**Prebuilt bundle** (recommended): grab
-`sitar-vX.Y.Z-linux-amd64.tar.gz` from the
-[Releases page](https://github.com/stefdoerr/sitar/releases),
-extract it, and copy the `sitar.lv2/` directory into your MOD Desktop
-plugins directory (default `~/Documents/MOD Desktop/lv2/`). Restart
-MOD Desktop.
-
-**Or build from source:**
+Download `sitar-vX.Y.Z-linux-amd64.tar.gz`, then copy the `sitar.lv2/` folder
+into your MOD Desktop plugin directory (default `~/Documents/MOD Desktop/lv2/`):
 
 ```bash
-git clone --recurse-submodules https://github.com/stefdoerr/sitar.git
-cd sitar
-make
-./install.sh                       # installs to MOD Desktop's plugin dir
+tar xf sitar-vX.Y.Z-linux-amd64.tar.gz
+cp -r sitar.lv2 ~/"Documents/MOD Desktop/lv2/"
 ```
 
-The `install.sh` script defaults to `~/Documents/MOD Desktop/lv2/` — the
-official user-plugin path on Linux, which survives MOD Desktop reinstalls.
-To install alongside MOD Desktop's bundled plugins instead (e.g. for
-distribution testing), override with:
+Restart MOD Desktop and the plugin shows up in the plugin store.
+
+### MOD Dwarf (hardware)
+
+Download `sitar-vX.Y.Z-dwarf-aarch64.tar.gz`, copy `sitar.lv2/` onto the device
+over the network, and restart its audio stack:
 
 ```bash
-MOD_DESKTOP_PLUGINS=/path/to/mod-desktop-X.Y.Z/mod-desktop/plugins ./install.sh
+tar xf sitar-vX.Y.Z-dwarf-aarch64.tar.gz
+scp -O -r sitar.lv2 root@192.168.51.1:/root/.lv2/
+ssh root@192.168.51.1 'systemctl restart jack2 mod-ui'
 ```
 
-Restart MOD Desktop and the plugin appears under brand **"Stefan"** as
-**"Sympathetic Sitar"**.
+The plugin then appears in the Dwarf's plugin store.
 
-### MOD Dwarf (hardware, aarch64)
+### Desktop DAWs — VST3 / CLAP (Linux · Windows · macOS)
 
-**Prebuilt bundle** (recommended): grab
-`sitar-vX.Y.Z-dwarf-aarch64.tar.gz` from the
-[Releases page](https://github.com/stefdoerr/sitar/releases), extract,
-and copy the `sitar.lv2/` directory into the Dwarf's `/root/.lv2/`
-(via `scp -O -r sitar.lv2 root@192.168.51.1:/root/.lv2/`). Then SSH in
-and run `systemctl restart jack2 mod-ui` so the new plugin world is
-picked up.
+Download the bundle for your OS and put the plugin in your system plugin folder:
 
-**Or cross-compile from source** via Docker (the only host requirement is
-Docker). From a clean machine:
+| OS | Download | Copy the `.vst3` / `.clap` into |
+|---|---|---|
+| **Linux** | `sitar-vX.Y.Z-linux-x86_64.tar.xz` | `~/.vst3/` and `~/.clap/` |
+| **Windows** | `sitar-vX.Y.Z-win64.zip` | `%COMMONPROGRAMFILES%\VST3\` and `…\CLAP\` |
+| **macOS** | `sitar-vX.Y.Z-macos-universal.pkg` | run the installer |
 
-```bash
-make dwarf-image          # one-time, ~30-60 min — builds Docker image with the aarch64 cross-toolchain inline
-make dwarf                # cross-build + scp to Dwarf at 192.168.51.1
-```
+The macOS package is **unsigned** — right-click it and choose **Open** to get
+past Gatekeeper. Rescan plugins in your DAW afterwards.
 
-`make dwarf` is `make dwarf-build && make dwarf-deploy`. The bundle lands
-locally at `bin/dwarf/sitar.lv2` (also pushed to `/root/.lv2/` on the
-device). Override defaults on the command line:
-
-```bash
-make dwarf DWARF_HOST=sitar.local DWARF_USER=admin DWARF_LV2DIR=/usr/lib/lv2
-```
-
-The vendored Docker setup (toolchain targets glibc 2.27 + gcc 9.4.0, the
-Dwarf's exact ABI) lives in [`mod-build/`](mod-build/README.md).
-
-### Generic LV2 host (Carla, jalv, Reaper, Ardour, …)
-
-```bash
-git clone --recurse-submodules https://github.com/YOUR_USER/sitar.git
-cd sitar
-make
-sudo make install               # to /usr/lib/lv2/
-# or for a user-local install:
-make install PREFIX="$HOME/.lv2" LV2_DIR="$HOME/.lv2"
-```
-
-The plugin URI is `http://sitar.local/plugins/sitar` — hosts will pick it up
-on the next scan.
-
-### Desktop DAWs — VST3 / CLAP (Linux, Windows, macOS)
-
-**Prebuilt** (recommended): download the VST3/CLAP bundle for your OS from the
-[Releases page](https://github.com/stefdoerr/sitar/releases) and drop it into your
-plugin folder — e.g. `~/.vst3` and `~/.clap` on Linux, `~/Library/Audio/Plug-Ins/VST3`
-and `.../CLAP` on macOS, `%COMMONPROGRAMFILES%\VST3` on Windows. macOS ships as an
-**unsigned `.pkg`** installer (right-click → Open to get past Gatekeeper).
-
-**Or build from source:** `make` produces `bin/sitar.{lv2,vst3,clap}` with your host
-toolchain — copy the `.vst3` / `.clap` into the folders above.
-
-These desktop binaries are built for all three OSes by GitHub Actions and attached to
-each release; MOD Dwarf and Patchstorage builds are produced locally (`make release`).
+> **Raspberry Pi / Patchbox OS:** LV2 builds for `rpi-aarch64` and
+> `patchbox-os-arm32` are on the Releases page too, and the plugin is published
+> on [Patchstorage](https://patchstorage.com/) for one-tap install on supported
+> devices.
 
 ## Usage tips
 
@@ -225,7 +179,103 @@ each release; MOD Dwarf and Patchstorage builds are produced locally (`make rele
 * For sitar-authentic feel, try **Raga Yaman** with root **A**, **OCT 2**,
   and **Jawari ≈ 0.3** with a clean guitar input.
 
-## Project layout
+---
+
+## Developers
+
+Everything below is for building from source, cross-compiling for the Dwarf,
+and publishing. Users don't need any of it — see [Install](#install) above.
+
+### Prerequisites
+
+```bash
+# Debian / Ubuntu
+sudo apt install build-essential pkg-config git
+```
+
+Clone with submodules (DPF is vendored as one) and build:
+
+```bash
+git clone --recurse-submodules https://github.com/stefdoerr/sitar.git
+cd sitar
+make            # produces bin/sitar.{lv2,vst3,clap} with your host toolchain
+```
+
+### Install a local build
+
+**MOD Desktop:**
+
+```bash
+./install.sh                       # installs bin/sitar.lv2 to MOD Desktop's plugin dir
+```
+
+`install.sh` defaults to `~/Documents/MOD Desktop/lv2/` — the official
+user-plugin path on Linux, which survives MOD Desktop reinstalls. To install
+alongside MOD Desktop's bundled plugins instead (e.g. for distribution
+testing), override with:
+
+```bash
+MOD_DESKTOP_PLUGINS=/path/to/mod-desktop-X.Y.Z/mod-desktop/plugins ./install.sh
+```
+
+**Generic LV2 host** (Carla, jalv, Reaper, Ardour, …):
+
+```bash
+sudo make install                  # to /usr/lib/lv2/
+# or for a user-local install:
+make install PREFIX="$HOME/.lv2" LV2_DIR="$HOME/.lv2"
+```
+
+The plugin URI is `http://sitar.local/plugins/sitar` — hosts will pick it up
+on the next scan.
+
+**Desktop VST3 / CLAP:** `make` already produced `bin/sitar.vst3` and
+`bin/sitar.clap` — copy them into the system plugin folders listed under
+[Install → Desktop DAWs](#desktop-daws--vst3--clap-linux--windows--macos).
+
+### Tests
+
+```bash
+make test        # host-less DSP regression tests, compiled + run under AddressSanitizer
+```
+
+Each `tests/test_*.cpp` is a plain `main()` compiled directly against the
+plugin source and DPF — no host required.
+
+### MOD Dwarf cross-compile (Docker)
+
+The only host requirement is Docker. From a clean machine:
+
+```bash
+make dwarf-image          # one-time, ~30-60 min — builds Docker image with the aarch64 cross-toolchain inline
+make dwarf                # cross-build + scp to Dwarf at 192.168.51.1
+```
+
+`make dwarf` is `make dwarf-build && make dwarf-deploy`. The bundle lands
+locally at `bin/dwarf/sitar.lv2` (also pushed to `/root/.lv2/` on the
+device). Override defaults on the command line:
+
+```bash
+make dwarf DWARF_HOST=sitar.local DWARF_USER=admin DWARF_LV2DIR=/usr/lib/lv2
+```
+
+The vendored Docker setup (toolchain targets glibc 2.27 + gcc 9.4.0, the
+Dwarf's exact ABI) lives in [`mod-build/`](mod-build/README.md).
+
+### Side-by-side beta builds
+
+For A/B testing, the same source can be built as a second plugin with a
+distinct URI / unique-id by setting `BETA=1`:
+
+```bash
+make beta                                    # builds bin/sitar-beta.lv2
+MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins BETA=1 ./install.sh
+```
+
+The beta and stable bundles can co-exist on the same host; the beta
+shows up as **"Sitar (Beta)"** under brand **"Stefan"**.
+
+### Project layout
 
 ```
 .
@@ -255,20 +305,14 @@ each release; MOD Dwarf and Patchstorage builds are produced locally (`make rele
                                  (BETA=1 to install sitar-beta.lv2)
 ```
 
-### Side-by-side beta builds
+### Cutting a release
 
-For A/B testing, the same source can be built as a second plugin with a
-distinct URI / unique-id by setting `BETA=1`:
+`make release version=X.Y.Z` creates the GitHub release with the MOD /
+Patchstorage LV2 bundles, the Dwarf build, and the PDF manual. GitHub Actions
+then cross-builds the desktop **VST3 / CLAP** for Linux, Windows, and macOS and
+attaches them to the same release automatically.
 
-```bash
-make beta                                    # builds bin/sitar-beta.lv2
-MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins BETA=1 ./install.sh
-```
-
-The beta and stable bundles can co-exist on the same host; the beta
-shows up as **"Sitar (Beta)"** under brand **"Stefan"**.
-
-## Publishing to Patchstorage
+### Publishing to Patchstorage
 
 `make patchstorage` cross-builds the plugin for the three targets
 patchstorage.com's LV2-plugins platform supports and publishes it, reusing
@@ -300,9 +344,7 @@ Then `conda activate patchstorage-uploader` before `make`, or pass
 A modgui **screenshot** must be present in the bundle (Sitar ships one), and the
 repo-root `patchstorage.json` supplies `source_code_url` / `donate_url`. The three
 bundles are also attached to GitHub releases (via `make release`), with
-`linux-amd64` replacing the old `linux-x86_64` asset. Desktop **VST3 + CLAP** builds
-for Linux / Windows / macOS are attached to the same releases automatically by GitHub
-Actions — see the *Desktop DAWs* section under [Installation](#installation).
+`linux-amd64` replacing the old `linux-x86_64` asset.
 
 ## License
 
