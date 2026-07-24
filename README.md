@@ -19,71 +19,6 @@ follow whatever you play, harmonized against the scale you pick. The
 48-string bank spans roughly four octaves above the root, and
 `STRINGS` cursors over how many of them ring at once.
 
-### Features
-
-* **Up to 48 sympathetic strings**, each one a comb-filter resonator with
-  fractional-delay tuning, per-string damping, and an in-loop tanh
-  saturator so a single string can't dominate when its resonance
-  frequency is excited
-* **STRINGS** knob (1–48) — picks how many strings ring at once,
-  starting from the root upward through the scale
-* **Scale + Root selectors** (LV2 enum parameters — also appear in the
-  cogwheel settings of any LV2 host)
-  * 14 Western scales (major / minor / modes / pentatonics / blues /
-    pythagorean / chromatic)
-  * 4 Turkish makams (Rast, Uşşak, Hicaz, Saba) with proper neutral
-    intervals (11-limit + 13-limit Just intonation)
-  * 6 Hindustani ragas (Yaman, Bhairav, Bhairavi, Todi, Marwa, Malkauns)
-* **Root** as a pitch class (C / C# / D / … / B) — paired with the OCT
-  knob it covers C2 through C8
-* **OCT** (2–6) — absolute octave for the root pitch class. Default 3
-  puts the root at C3 (≈131 Hz); higher octaves leave only upper
-  harmonics of the input to excite the strings, for shimmer-only effects.
-* **Custom scales** — beyond the built-ins, define your own microtonal
-  tuning (ratios like `3/2` or cents like `347.4`) in the pedal's scale
-  editor (the ✎ button). Up to 8 user scales, saved with the pedalboard;
-  they appear in the SCALE menu alongside the presets. Per-string
-  frequencies are computed internally — there are no per-string knobs or
-  ports to manage. See the manual's *Make your own scale*.
-* **Decay** with a curve that pushes the audible sustain range into the
-  lower half of the knob (knob travel ≈ change in ring time). Capped at
-  fb = 0.998 to prevent infinite resonance build-up.
-* **Bloom** — shared bridge-bus cross-coupling: every active string is fed
-  a small fraction of the others' output through a DC-blocked,
-  tanh-saturated bus, mirroring how a real sitar's *tarafs* share one
-  physical bridge and excite each other. Adds a subtle ring extension
-  and harmonic shimmer; coupling is scaled by the active string count to
-  stay stable across all Scale × Decay × STRINGS combinations.
-* **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
-  buzz of a real sitar's *jawari* bridge. Level-neutral: the saturated
-  path is normalized for small-signal unity and blended in by the knob,
-  so JAWARI adds harmonics without boosting the wet level or stepping
-  when it engages. A ~3.5 kHz one-pole tilt-down LPF fades in with the
-  knob to tame the brittle top-end harmonics the saturator generates.
-* **Mix** — equal-power dry/wet crossfade (`dry·cos(mix·π/2) +
-  wet·sin(mix·π/2)`) so the output stays at roughly constant power
-  across the knob.
-* **Level** — output trim, ±12 dB, applied post-mix to the L/R bus.
-  For the last bit of input↔output matching by ear.
-* **Sens** (sensitivity) — input trim into the comb bank, 0..1. Lower
-  values cause strings to excite more slowly and quietly at any given
-  input level. Sits between the noise gate and the strings.
-* **Gate** — input noise gate. Peak-envelope follower with instant
-  attack / 80 ms release; mutes only the signal feeding the combs, so
-  existing rings keep decaying at the user-set rate. Knob 0..10 maps
-  internally to a linear-amplitude threshold (10 ≈ -34 dBFS).
-* **Stereo** — 5-mode layout: Mono / Linear Narrow / Linear / Wide
-  Narrow / Wide. *Linear* spreads strings monotonically low→left
-  high→right; *Wide* alternates edges-to-centre so adjacent scale
-  degrees end up on opposite sides; *Narrow* variants halve the pan
-  magnitude. Defaults to Wide Narrow.
-* **Test Scale** button — plucks each populated string in turn for
-  ~2 seconds so you can hear the tuning without needing to play anything.
-  Output bypasses dry so only the wet plucks are audible.
-* **MOD pedalboard GUI** — proper drag-handle, brass-knob film-strip,
-  audio jack rendering; renders correctly in MOD Desktop and on Dwarf
-  hardware
-
 ## Install
 
 Every release ships ready-to-run bundles — **no build tools, no developer
@@ -180,6 +115,74 @@ past Gatekeeper. Rescan plugins in your DAW afterwards.
   and **Jawari ≈ 0.3** with a clean guitar input.
 
 ---
+
+## Features
+
+Every control in detail, and the DSP behind it — reference material for the
+curious, not required reading to use the plugin.
+
+* **Up to 48 sympathetic strings**, each one a comb-filter resonator with
+  fractional-delay tuning, per-string damping, and an in-loop tanh
+  saturator so a single string can't dominate when its resonance
+  frequency is excited
+* **STRINGS** knob (1–48) — picks how many strings ring at once,
+  starting from the root upward through the scale
+* **Scale + Root selectors** (LV2 enum parameters — also appear in the
+  cogwheel settings of any LV2 host)
+  * 14 Western scales (major / minor / modes / pentatonics / blues /
+    pythagorean / chromatic)
+  * 4 Turkish makams (Rast, Uşşak, Hicaz, Saba) with proper neutral
+    intervals (11-limit + 13-limit Just intonation)
+  * 6 Hindustani ragas (Yaman, Bhairav, Bhairavi, Todi, Marwa, Malkauns)
+* **Root** as a pitch class (C / C# / D / … / B) — paired with the OCT
+  knob it covers C2 through C8
+* **OCT** (2–6) — absolute octave for the root pitch class. Default 3
+  puts the root at C3 (≈131 Hz); higher octaves leave only upper
+  harmonics of the input to excite the strings, for shimmer-only effects.
+* **Custom scales** — beyond the built-ins, define your own microtonal
+  tuning (ratios like `3/2` or cents like `347.4`) in the pedal's scale
+  editor (the ✎ button). Up to 8 user scales, saved with the pedalboard;
+  they appear in the SCALE menu alongside the presets. Per-string
+  frequencies are computed internally — there are no per-string knobs or
+  ports to manage. See the manual's *Make your own scale*.
+* **Decay** with a curve that pushes the audible sustain range into the
+  lower half of the knob (knob travel ≈ change in ring time). Capped at
+  fb = 0.998 to prevent infinite resonance build-up.
+* **Bloom** — shared bridge-bus cross-coupling: every active string is fed
+  a small fraction of the others' output through a DC-blocked,
+  tanh-saturated bus, mirroring how a real sitar's *tarafs* share one
+  physical bridge and excite each other. Adds a subtle ring extension
+  and harmonic shimmer; coupling is scaled by the active string count to
+  stay stable across all Scale × Decay × STRINGS combinations.
+* **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
+  buzz of a real sitar's *jawari* bridge. Level-neutral: the saturated
+  path is normalized for small-signal unity and blended in by the knob,
+  so JAWARI adds harmonics without boosting the wet level or stepping
+  when it engages. A ~3.5 kHz one-pole tilt-down LPF fades in with the
+  knob to tame the brittle top-end harmonics the saturator generates.
+* **Mix** — equal-power dry/wet crossfade (`dry·cos(mix·π/2) +
+  wet·sin(mix·π/2)`) so the output stays at roughly constant power
+  across the knob.
+* **Level** — output trim, ±12 dB, applied post-mix to the L/R bus.
+  For the last bit of input↔output matching by ear.
+* **Sens** (sensitivity) — input trim into the comb bank, 0..1. Lower
+  values cause strings to excite more slowly and quietly at any given
+  input level. Sits between the noise gate and the strings.
+* **Gate** — input noise gate. Peak-envelope follower with instant
+  attack / 80 ms release; mutes only the signal feeding the combs, so
+  existing rings keep decaying at the user-set rate. Knob 0..10 maps
+  internally to a linear-amplitude threshold (10 ≈ -34 dBFS).
+* **Stereo** — 5-mode layout: Mono / Linear Narrow / Linear / Wide
+  Narrow / Wide. *Linear* spreads strings monotonically low→left
+  high→right; *Wide* alternates edges-to-centre so adjacent scale
+  degrees end up on opposite sides; *Narrow* variants halve the pan
+  magnitude. Defaults to Wide Narrow.
+* **Test Scale** button — plucks each populated string in turn for
+  ~2 seconds so you can hear the tuning without needing to play anything.
+  Output bypasses dry so only the wet plucks are audible.
+* **MOD pedalboard GUI** — proper drag-handle, brass-knob film-strip,
+  audio jack rendering; renders correctly in MOD Desktop and on Dwarf
+  hardware
 
 ## Developers
 
