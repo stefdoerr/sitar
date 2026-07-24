@@ -14,7 +14,7 @@ Run inside any Python env that has Pillow installed:
 
 import math
 import os
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT  = os.path.join(HERE, "knobs", "sitar-knob.png")
@@ -28,88 +28,89 @@ START_ANGLE    = -135.0       # frame 0 points to "lower-left" (8 o'clock)
 BRASS_HI   = (255, 224, 158)
 BRASS_MID  = (216, 168,  82)
 BRASS_LOW  = (122,  78,  24)
-RIM_DARK   = ( 38,  20,   8)
-INDICATOR  = ( 24,  12,   4)
+RIM_DARK   = ( 36,  18,   6)
+INDICATOR  = ( 24,  16,  10)
 GROOVE     = ( 90,  56,  20, 150)
 
 
-def draw_knob(frame_size: int, angle_deg: float) -> Image.Image:
-    """Render a single knob frame with the indicator at the given angle."""
-    img  = Image.new("RGBA", (frame_size, frame_size), (0, 0, 0, 0))
-    cx   = cy = frame_size / 2
-    r_outer = frame_size * 0.46
-    r_inner = frame_size * 0.40
-    r_face  = frame_size * 0.34
+def _blend(a, b, t):
+    """Linear RGB blend a→b at t in [0, 1]."""
+    return tuple(int(a[c] * (1 - t) + b[c] * t) for c in range(3))
 
-    # Outer rim (dark, slightly larger than the face).
+
+def draw_knob(frame_size: int, angle_deg: float) -> Image.Image:
+    """Render a single knob frame with the indicator at the given angle.
+
+    The brass face is an offset radial gradient — bright at the ~10 o'clock
+    highlight, quickly into mid-brass, then dark at the edge — drawn as rings
+    concentric with the HIGHLIGHT point but clipped to the centred face circle.
+    So only the *light* is off-centre; the body edge, grooves and indicator
+    pivot all share the true centre that MOD-UI's film widget rotates about (the
+    knob no longer drifts up-left inside its frame).
+    """
+    fs   = frame_size
+    img  = Image.new("RGBA", (fs, fs), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
+    cx   = cy = fs / 2
+    r_outer = fs * 0.46
+    r_face  = fs * 0.435
+
+    # Dark rim — concentric with the frame centre.
     draw.ellipse(
         [cx - r_outer, cy - r_outer, cx + r_outer, cy + r_outer],
         fill=RIM_DARK + (255,),
     )
 
-    # Brass body — fake radial gradient by stacking shrinking discs.
-    steps = 24
+    # Brass face — an offset radial gradient matching the modgui mock-up:
+    # HI at the ~10 o'clock focal point, into MID by ~46% of the radius, then
+    # LOW at the edge. Drawn as discs concentric with the highlight point (so the
+    # bright spot is small and up-left), then clipped to the centred face circle
+    # so the body edge itself stays concentric with the frame.
+    face = Image.new("RGBA", (fs, fs), (0, 0, 0, 0))
+    fd   = ImageDraw.Draw(face)
+    hx, hy = cx - fs * 0.12, cy - fs * 0.155           # highlight focal point
+    R = r_face + math.hypot(cx - hx, cy - hy)           # reaches the far edge
+    steps = 56
     for i in range(steps):
-        t = i / (steps - 1)
-        # Blend BRASS_HI (top-left highlight) → BRASS_MID → BRASS_LOW.
-        if t < 0.5:
-            k = t * 2
-            col = tuple(int(BRASS_HI[c] * (1 - k) + BRASS_MID[c] * k) for c in range(3))
+        u = i / (steps - 1)          # 0 = outer edge (LOW, large) -> 1 = focal (HI)
+        s = 1.0 - u                  # gradient stop, measured from the focal point
+        if s < 0.46:
+            col = _blend(BRASS_HI, BRASS_MID, s / 0.46)
         else:
-            k = (t - 0.5) * 2
-            col = tuple(int(BRASS_MID[c] * (1 - k) + BRASS_LOW[c] * k) for c in range(3))
-        r = r_inner * (1 - t) + r_face * t * 0.4
-        # Offset toward upper-left so the highlight sits at ~10 o'clock.
-        off_x = (1 - t) * frame_size * 0.07
-        off_y = (1 - t) * frame_size * 0.07
-        draw.ellipse(
-            [cx - r - off_x, cy - r - off_y, cx + r - off_x, cy + r - off_y],
-            fill=col + (255,),
-        )
+            col = _blend(BRASS_MID, BRASS_LOW, (s - 0.46) / 0.54)
+        r = R * (1 - u)
+        fd.ellipse([hx - r, hy - r, hx + r, hy + r], fill=col + (255,))
+    face = face.filter(ImageFilter.GaussianBlur(fs * 0.012))   # smooth the banding
+    mask = Image.new("L", (fs, fs), 0)
+    ImageDraw.Draw(mask).ellipse(
+        [cx - r_face, cy - r_face, cx + r_face, cy + r_face], fill=255)
+    face.putalpha(ImageChops.multiply(face.getchannel("A"), mask))
+    img.alpha_composite(face)
 
-    # Concentric groove for sitar bridge feel.
-    for r in (r_inner * 0.92, r_inner * 0.78):
+    # Concentric grooves for the sitar-bridge feel — centred.
+    for r in (r_face * 0.80, r_face * 0.62):
         draw.ellipse(
             [cx - r, cy - r, cx + r, cy + r],
-            outline=GROOVE, width=1,
+            outline=GROOVE, width=max(1, fs // 128),
         )
 
-    # Indicator: dark wedge from centre toward the angle.
-    ind_layer = Image.new("RGBA", (frame_size, frame_size), (0, 0, 0, 0))
-    ind_draw  = ImageDraw.Draw(ind_layer)
+    # Indicator: a dark line + tip dot pivoting at the TRUE centre, so it tracks
+    # MOD's film rotation exactly and always lands on the face.
+    ind = Image.new("RGBA", (fs, fs), (0, 0, 0, 0))
+    idr = ImageDraw.Draw(ind)
     # Compass convention: angle 0 = up, +90 = right. (sin, -cos) gives the
     # direction in image coordinates (y grows downward).
     rad   = math.radians(angle_deg)
-    tip_x = cx + math.sin(rad) * r_inner * 0.92
-    tip_y = cy - math.cos(rad) * r_inner * 0.92
-    base_x = cx + math.sin(rad) * r_inner * 0.18
-    base_y = cy - math.cos(rad) * r_inner * 0.18
-
-    # Draw a thin line + a dot at the tip — readable at small sizes.
-    ind_draw.line(
-        [(base_x, base_y), (tip_x, tip_y)],
-        fill=INDICATOR + (255,),
-        width=max(2, frame_size // 30),
-    )
-    dot_r = frame_size * 0.05
-    ind_draw.ellipse(
-        [tip_x - dot_r, tip_y - dot_r, tip_x + dot_r, tip_y + dot_r],
+    reach = r_face * 0.86
+    tip   = (cx + math.sin(rad) * reach,       cy - math.cos(rad) * reach)
+    base  = (cx + math.sin(rad) * reach * 0.2, cy - math.cos(rad) * reach * 0.2)
+    idr.line([base, tip], fill=INDICATOR + (255,), width=max(2, fs // 30))
+    dot = fs * 0.05
+    idr.ellipse(
+        [tip[0] - dot, tip[1] - dot, tip[0] + dot, tip[1] + dot],
         fill=INDICATOR + (255,),
     )
-
-    img.alpha_composite(ind_layer)
-
-    # Subtle bevel highlight at the top-left edge of the brass body.
-    bevel = Image.new("RGBA", (frame_size, frame_size), (0, 0, 0, 0))
-    bd    = ImageDraw.Draw(bevel)
-    bd.ellipse(
-        [cx - r_inner * 1.02, cy - r_inner * 1.02,
-         cx + r_inner * 0.6,  cy + r_inner * 0.6],
-        outline=(255, 240, 200, 110), width=2,
-    )
-    bevel = bevel.filter(ImageFilter.GaussianBlur(radius=1.2))
-    img.alpha_composite(bevel)
+    img.alpha_composite(ind)
 
     return img
 
