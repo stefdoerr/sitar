@@ -26,8 +26,7 @@ with pictures — the fastest way in.
 
 ## Install
 
-Every release ships ready-to-run bundles — **no build tools, no developer
-setup**. Grab the latest for your platform from the
+Every release ships ready-to-run bundles. Grab the latest for your platform from the
 **[Releases page](https://github.com/stefdoerr/sitar/releases/latest)** and
 follow the matching steps below.
 
