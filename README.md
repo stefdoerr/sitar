@@ -77,47 +77,6 @@ past Gatekeeper. Rescan plugins in your DAW afterwards.
 > on [Patchstorage](https://patchstorage.com/) for one-tap install on supported
 > devices.
 
-## Usage tips
-
-* The plugin is a *resonator*, not a generator: it needs audio in to ring.
-  Pluck a guitar, hum into a mic, or feed a synth into it.
-* **STRINGS** at 13 (default) covers a single octave of a 7-note scale
-  or two octaves of a pentatonic. Push to 28+ for the full 4-octave
-  span, or drop to 4-7 for a sparse tambura-style drone.
-* **OCT** at 3 (default) puts the root at C3-ish; OCT 5–6 leaves only the
-  upper harmonics of bassy input to excite the strings, for "shimmer
-  only" effects with no muddy fundamentals.
-* **Decay** below 0.3 is for percussive plucks; 0.5–0.7 for natural
-  sympathetic feel; 0.9+ becomes a sustained drone.
-* **Bloom** at 0 is fully independent strings (input-driven only).
-  Around 0.3–0.6 adds a subtle ring extension as strings nudge each
-  other through the shared bridge; at the top of the knob you get a ~2×
-  boost to sustained resonance. Bloom is deliberately conservative —
-  full cross-coupling at high Decay would run away into self-oscillation
-  because feedback combs have resonance peaks at every harmonic of their
-  tuned frequency, so multiple strings line up at the same pitch. The
-  current setting trades drone-like wash for predictable stability.
-* The default **Mix** is 0.5 (dry + wet, equal-power). For a pure
-  sympathetic effect put it in a parallel chain at Mix = 1.0 and blend
-  manually.
-* **Sens** lower (≈ 0.3–0.6) is the cure if singing the root note (or any
-  scale pitch) makes a single string dominate. The per-string limiter
-  already caps absolute amplitude, but lowering Sens slows the build-up.
-* **Level** (±12 dB) is the last bit of input↔output matching. After
-  setting Mix and Sens, dial Level by ear so plugin-on and plugin-off
-  feel the same volume.
-* **Gate** at 0 disables the gate (good for studio-clean signals); 1.0
-  (default) catches typical mic / guitar noise floors. Push higher if
-  your input is genuinely noisy.
-* **Stereo** at *Wide Narrow* (default) is the safe musical choice. *Wide*
-  is the most theatrical (adjacent scale degrees on opposite sides);
-  *Mono* is right for a single-speaker live rig.
-* **Test Scale** sequences every populated string as a ~2-second pluck
-  pattern (so 13 strings = ~26 s, 28 strings = ~56 s), so you can audibly
-  verify scale × root × OCT before playing.
-* For sitar-authentic feel, try **Raga Yaman** with root **A**, **OCT 2**,
-  and **Jawari ≈ 0.3** with a clean guitar input.
-
 ## Manual
 
 A beginner-friendly **PDF manual** walks through every control, sound recipes,
