@@ -35,6 +35,10 @@ OUT_EDITOR = os.path.join(HERE, "screenshot-editor.png")
 
 WIDTH  = 640
 HEIGHT = 220
+# Device pixel ratio for the render. 2x keeps the same 640x220 CSS layout but
+# outputs 1280x440 — crisper on HiDPI screens and in the printed manual. The
+# 128px knob sprite frames (shown at 46px) still downscale, so knobs stay sharp.
+SCALE  = 2
 
 # SITAR_EDITOR=1 renders the user-scale editor overlay (open + populated with an
 # example scale) to screenshot-editor.png instead of the closed face. Used by
@@ -162,7 +166,7 @@ def main():
             browser = p.chromium.launch()
             context = browser.new_context(
                 viewport={"width": WIDTH, "height": HEIGHT},
-                device_scale_factor=1,
+                device_scale_factor=SCALE,
             )
             tab = context.new_page()
             tab.goto("file://" + page_path)
@@ -175,7 +179,7 @@ def main():
 
         out = OUT_EDITOR if EDITOR else OUT
         shutil.copyfile(tmp_out, out)
-        print(f"Wrote {out} ({WIDTH}x{HEIGHT}, rendered by headless Chromium)")
+        print(f"Wrote {out} ({WIDTH*SCALE}x{HEIGHT*SCALE} @ {SCALE}x, rendered by headless Chromium)")
 
 
 if __name__ == "__main__":
