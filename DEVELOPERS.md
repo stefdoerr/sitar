@@ -117,7 +117,7 @@ shows up as **"Sitar (Beta)"** under brand **"Stefan"**.
 ├── mod-build/                 — Self-contained Dwarf cross-build setup
 │   ├── Dockerfile             — vendored mod-plugin-builder Dockerfile,
 │   │                            inline aarch64 toolchain build
-│   ├── build-sitar.sh         — runs inside the container; rsyncs source,
+│   ├── build-plugin.sh        — runs inside the container; rsyncs source,
 │   │                            does the host TTL pass + aarch64 .so build
 │   └── README.md              — Dwarf cross-build walkthrough
 ├── Makefile                   — top-level build + install + Dwarf targets;

@@ -198,34 +198,42 @@ install-beta:
 # (~30-60 min, one-time per machine). After that, `make dwarf-build` is
 # ~10s and produces build/dwarf/sitar.lv2 ready to scp.
 #
+# The image holds NO plugin source (the tree is mounted at build time), so
+# it is plugin-INDEPENDENT: one shared image (moddwarf-cross) is reused by
+# every plugin built from this template. The shared name is deliberate — do
+# NOT derive it from $(PLUGIN), or each plugin rebuilds the ~6 GB toolchain.
+# (Override CROSS_IMAGE=... only if you really want a separate image.)
+#
 # Override on the command line as needed, e.g.
 #   make dwarf-deploy DWARF_HOST=sitar.local DWARF_USER=admin
-SITAR_IMAGE  ?= sitar-cross
+CROSS_IMAGE  ?= moddwarf-cross
 DWARF_HOST   ?= 192.168.51.1
 DWARF_USER   ?= root
 DWARF_LV2DIR ?= /root/.lv2
 
-DWARF_BUNDLE := build/dwarf/sitar.lv2
+DWARF_BUNDLE := build/dwarf/$(BUNDLE_NAME).lv2
 
 # 1. Build the cross-toolchain image. One-time, ~30-60 min, cached forever.
 dwarf-image:
-	docker build -t $(SITAR_IMAGE) mod-build/
+	docker build -t $(CROSS_IMAGE) mod-build/
 
-# 2. Cross-build the plugin. Runs build-sitar.sh inside the image, which
+# 2. Cross-build the plugin. Runs build-plugin.sh inside the image, which
 #    does a native build for .ttl/modgui assets and a cross-build for the
 #    aarch64 .so, dropping the assembled bundle into build/dwarf/sitar.lv2.
 dwarf-build:
-	@if ! docker image inspect $(SITAR_IMAGE) >/dev/null 2>&1; then \
-		echo "==> $(SITAR_IMAGE) image not built yet — building (~30-60 min, one-time)"; \
+	@if ! docker image inspect $(CROSS_IMAGE) >/dev/null 2>&1; then \
+		echo "==> $(CROSS_IMAGE) image not built yet — building (~30-60 min, one-time)"; \
 		$(MAKE) dwarf-image; \
 	fi
 	@mkdir -p build/dwarf
 	docker run --rm \
 		-e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g) \
+		-e PLUGIN=$(PLUGIN) \
+		-e BETA=$(BETA) \
 		-v "$(CURDIR):/src:ro" \
 		-v "$(CURDIR)/build/dwarf:/out" \
-		$(SITAR_IMAGE) \
-		bash /src/mod-build/build-sitar.sh
+		$(CROSS_IMAGE) \
+		bash /src/mod-build/build-plugin.sh
 
 # 3. Push the bundle to a connected Dwarf via scp. The Dwarf's `/root/.lv2/`
 #    is the per-user plugin dir and survives firmware updates.
