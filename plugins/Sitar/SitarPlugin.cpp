@@ -173,6 +173,9 @@ public:
     // (Mix · Level). Ports are keyed by symbol in state/automation, so this
     // index order is display-only and safe to change. The switch cases below
     // match by enum name and need not be reordered.
+    //
+    // The same face sections are declared as port groups (see GroupId /
+    // initPortGroup) so hosts can band the parameters visually.
     enum ParamIndex {
         kParamScale = 0,                      // enum, selects from kScales[] / user slots
         kParamRootNote,                       // enum, selects from kRootHz[]
@@ -188,6 +191,18 @@ public:
         kParamMix,
         kParamLevel,                          // output trim in dB (±12), post-mix
         kNumParams
+    };
+
+    // Pedal-face sections, published as LV2 port groups (pg:group) and as
+    // VST3/CLAP parameter groups. MOD's plugin-settings ("cogwheel") view
+    // paints one colour band per group; STEREO rides in Output rather than the
+    // selector bar because it is a spatialisation control.
+    enum GroupId {
+        kGroupScale = 0,
+        kGroupInput,
+        kGroupPitch,
+        kGroupResonance,
+        kGroupOutput
     };
 
     // Absolute cap on bridge-bus coupling. With the bridge DC blocker in
@@ -279,8 +294,47 @@ protected:
         Plugin::initAudioPort(input, index, port);
     }
 
+    void initPortGroup(uint32_t groupId, PortGroup& portGroup) override
+    {
+        // The gN_ prefixes are load-bearing, not decoration: MOD's host sorts
+        // port groups alphabetically by group symbol and lays the cogwheel view
+        // out in that order, so plain symbols would shuffle the bands into
+        // input/output/pitch/... and undo the pedal-face order the port indices
+        // above are chosen for. Only the name is user-facing in MOD and VST3.
+        switch (groupId)
+        {
+        case kGroupScale:     portGroup.name = "Scale";     portGroup.symbol = "g1_scale";     break;
+        case kGroupInput:     portGroup.name = "Input";     portGroup.symbol = "g2_input";     break;
+        case kGroupPitch:     portGroup.name = "Pitch";     portGroup.symbol = "g3_pitch";     break;
+        case kGroupResonance: portGroup.name = "Resonance"; portGroup.symbol = "g4_resonance"; break;
+        case kGroupOutput:    portGroup.name = "Output";    portGroup.symbol = "g5_output";    break;
+        default:              Plugin::initPortGroup(groupId, portGroup);                       break;
+        }
+    }
+
+    static uint32_t groupOf(uint32_t index)
+    {
+        switch (index)
+        {
+        case kParamScale: case kParamRootNote: case kParamAudition:
+            return kGroupScale;
+        case kParamGate: case kParamSensitivity:
+            return kGroupInput;
+        case kParamNumActive: case kParamOctave:
+            return kGroupPitch;
+        case kParamDecay: case kParamBloom: case kParamJawari:
+            return kGroupResonance;
+        case kParamStereoMode: case kParamMix: case kParamLevel:
+            return kGroupOutput;
+        }
+        return kPortGroupNone;
+    }
+
     void initParameter(uint32_t index, Parameter& parameter) override
     {
+        // Set before the switch: every case assigns (not or-s) parameter.hints,
+        // but none of them touch groupId.
+        parameter.groupId = groupOf(index);
         switch (index)
         {
         case kParamNumActive:
