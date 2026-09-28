@@ -8,11 +8,11 @@ Pipeline:
      normally fill in at runtime (brand, label, color, knob, audio-port loops).
   2. Read stylesheet-sitar.css and rewrite the `/resources/...{{{ns}}}` knob URL
      to a file:// path so chromium can load the sprite locally.
-  3. Inline the stylesheet, give the body a 640×HEIGHT viewport with overflow:hidden
+  3. Inline the stylesheet, give the body a WIDTH×HEIGHT viewport with overflow:hidden
      so the audio jacks (which stick out at -44px) are cropped away — matching
      real MOD plugin screenshots that show only the pedal frame.
   4. Write a self-contained render.html to a temp dir, launch Chromium headless,
-     screenshot it at 640×HEIGHT, and copy the PNG to screenshot-sitar.png.
+     screenshot it at WIDTH×HEIGHT, and copy the PNG to screenshot-sitar.png.
 
 Run inside any Python env that has Playwright + Chromium installed:
     pip install playwright && playwright install chromium
@@ -33,10 +33,10 @@ SPRITE = os.path.join(HERE, "knobs", "sitar-knob.png")
 OUT    = os.path.join(HERE, "screenshot-sitar.png")
 OUT_EDITOR = os.path.join(HERE, "screenshot-editor.png")
 
-WIDTH  = 640
+WIDTH  = 800
 HEIGHT = 220
-# Device pixel ratio for the render. 2x keeps the same 640x220 CSS layout but
-# outputs 1280x440 — crisper on HiDPI screens and in the printed manual. The
+# Device pixel ratio for the render. 2x keeps the same WIDTHxHEIGHT CSS layout but
+# outputs it at 2x — crisper on HiDPI screens and in the printed manual. The
 # 128px knob sprite frames (shown at 46px) still downscale, so knobs stay sharp.
 SCALE  = 2
 

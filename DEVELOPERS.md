@@ -232,6 +232,27 @@ is the terse engineering version.)
 * **Test Scale** button — plucks each populated string in turn for
   ~2 seconds so you can hear the tuning without needing to play anything.
   Output bypasses dry so only the wet plucks are audible.
+* **Strum ↑ / ↓** — two trigger ports (`strum_up`, `strum_down`, LV2
+  `pprops:trigger`, so each can sit on its own Dwarf footswitch). Plucks
+  every active string once, low→high or high→low, evenly spaced over
+  **SWEEP** (20 ms–2 s, default 250 ms). Each pluck is Karplus–Strong:
+  one period of fresh white noise per string, through a Jaffe–Smith pluck-position comb
+  (β = 0.13, near the bridge — the thin, nasal sitar colour), zero-mean
+  (DC would ring the combs' slow 0 Hz mode as a thump) and normalised to
+  the same energy on every string. New noise every strum, so no two sound
+  alike. One period long, so it never overlaps its own first echo.
+  Rejected by ear, with A/B renders: drawn pluck shapes (pulse: thump;
+  ± doublet: palm-muted; sawtooth: fake, bass-heavy) and low-passed noise
+  (warmer, duller). `tests/test_strum.cpp` checks even energy across
+  C2..B6 (within the comb's own 0–3 dB interpolation loss), direction,
+  STRENGTH scaling, no DC, fresh noise per strum and the ease-in.
+  The strum **eases in**: plucks start at half strength and smoothstep to
+  full by 70% of the strings (`kStrumRampStart` / `kStrumRampFrac`, picked
+  by ear). Without it an up strum opens on its lowest, longest-ringing
+  string at full force out of silence — a kick.
+  **STRENGTH** (0..1, default 0.25) scales the pluck. Added after GATE and SENS, so it
+  sounds with no input; goes through Bloom, Jawari, Mix and Level like any
+  excitation. Re-trigger restarts; ignored during Test Scale.
 * **MOD pedalboard GUI** — proper drag-handle, brass-knob film-strip,
   audio jack rendering; renders correctly in MOD Desktop and on Dwarf
   hardware

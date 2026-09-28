@@ -18,7 +18,9 @@
 #include "UserScale.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <vector>
 
 START_NAMESPACE_DISTRHO
 
@@ -170,7 +172,7 @@ public:
     // params in the same order the user sees on the pedal: selector bar
     // (Scale · Root · Stereo · Test), then the knob row Input (Gate · Sens) ·
     // Pitch (Strings · Oct) · Resonance (Decay · Bloom · Jawari) · Output
-    // (Mix · Level). Ports are keyed by symbol in state/automation, so this
+    // (Mix · Level) · Strum (Up · Down · Sweep · Strength). Ports are keyed by symbol in state/automation, so this
     // index order is display-only and safe to change. The switch cases below
     // match by enum name and need not be reordered.
     //
@@ -190,6 +192,10 @@ public:
         kParamJawari,
         kParamMix,
         kParamLevel,                          // output trim in dB (±12), post-mix
+        kParamStrumUp,                        // trigger, strum low -> high
+        kParamStrumDown,                      // trigger, strum high -> low
+        kParamStrumTime,                      // strum sweep duration, ms
+        kParamStrumLevel,                     // strum pluck strength (0..1)
         kNumParams
     };
 
@@ -202,7 +208,8 @@ public:
         kGroupInput,
         kGroupPitch,
         kGroupResonance,
-        kGroupOutput
+        kGroupOutput,
+        kGroupStrum
     };
 
     // Absolute cap on bridge-bus coupling. With the bridge DC blocker in
@@ -308,6 +315,7 @@ protected:
         case kGroupPitch:     portGroup.name = "Pitch";     portGroup.symbol = "g3_pitch";     break;
         case kGroupResonance: portGroup.name = "Resonance"; portGroup.symbol = "g4_resonance"; break;
         case kGroupOutput:    portGroup.name = "Output";    portGroup.symbol = "g5_output";    break;
+        case kGroupStrum:     portGroup.name = "Strum";     portGroup.symbol = "g6_strum";     break;
         default:              Plugin::initPortGroup(groupId, portGroup);                       break;
         }
     }
@@ -326,6 +334,9 @@ protected:
             return kGroupResonance;
         case kParamStereoMode: case kParamMix: case kParamLevel:
             return kGroupOutput;
+        case kParamStrumUp: case kParamStrumDown:
+        case kParamStrumTime: case kParamStrumLevel:
+            return kGroupStrum;
         }
         return kPortGroupNone;
     }
@@ -486,6 +497,37 @@ protected:
             parameter.ranges.def = 1.0f;
             break;
 
+        case kParamStrumUp:
+        case kParamStrumDown:
+            // Momentary: the host resets a trigger port to its default after
+            // it fires, so each press (or footswitch tap) strums once.
+            parameter.hints      = kParameterIsAutomatable | kParameterIsTrigger;
+            parameter.name       = index == kParamStrumUp ? "Strum Up" : "Strum Down";
+            parameter.symbol     = index == kParamStrumUp ? "strum_up" : "strum_down";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
+            break;
+
+        case kParamStrumTime:
+            parameter.hints      = kParameterIsAutomatable | kParameterIsLogarithmic;
+            parameter.name       = "Strum Sweep";
+            parameter.symbol     = "strum_time";
+            parameter.unit       = "ms";
+            parameter.ranges.min = 20.0f;
+            parameter.ranges.max = 2000.0f;
+            parameter.ranges.def = 250.0f;
+            break;
+
+        case kParamStrumLevel:
+            parameter.hints      = kParameterIsAutomatable;
+            parameter.name       = "Strum Strength";
+            parameter.symbol     = "strum_level";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.25f;   // a gentle brush; 0.5+ hits hard
+            break;
+
         case kParamStereoMode:
         {
             parameter.hints      = kParameterIsAutomatable | kParameterIsInteger;
@@ -527,6 +569,8 @@ protected:
         case kParamGate:         return fGateThreshold;
         case kParamLevel:        return fLevel;
         case kParamSensitivity:  return fSensitivity;
+        case kParamStrumTime:    return fStrumTimeMs;
+        case kParamStrumLevel:   return fStrumLevel;
         }
         return 0.0f;
     }
@@ -655,6 +699,21 @@ protected:
             if (value > 1.0f) value = 1.0f;
             fSensitivity = value;
             break;
+        case kParamStrumUp:
+        case kParamStrumDown:
+            if (value > 0.5f)
+                startStrum(index == kParamStrumUp);
+            break;
+        case kParamStrumTime:
+            if (value < 20.0f)   value = 20.0f;
+            if (value > 2000.0f) value = 2000.0f;
+            fStrumTimeMs = value;
+            break;
+        case kParamStrumLevel:
+            if (value < 0.0f) value = 0.0f;
+            if (value > 1.0f) value = 1.0f;
+            fStrumLevel = value;
+            break;
         }
     }
 
@@ -707,6 +766,7 @@ protected:
         fGateOpen      = 1.0f;
         fJawariLpfL    = 0.0f;
         fJawariLpfR    = 0.0f;
+        fStrumActive   = false;
     }
 
     void sampleRateChanged(double newSampleRate) override
@@ -718,6 +778,12 @@ protected:
         fAuditionPhaseSamples = static_cast<uint32_t>(newSampleRate * 2.0);       // 2 seconds per string
         fAuditionPluckSamples = static_cast<uint32_t>(newSampleRate * 0.030);     // 30 ms pluck
         if (fAuditionPluckSamples == 0) fAuditionPluckSamples = 1;
+        fSampleRate  = static_cast<float>(newSampleRate);
+        fStrumActive = false;
+        // One period of pluck per string, sized for the lowest string —
+        // allocated here (not on the audio thread), as the combs are.
+        fStrumPluckLen = maxDelay;
+        fStrumPluck.assign(static_cast<size_t>(kNumStrings) * maxDelay, 0.0f);
 
         // Gate envelope/release/smoothing coefficients:
         //   - envelope release: 80 ms half-life so brief drops within a note
@@ -951,11 +1017,25 @@ protected:
             // NUM is low. Inactive combs get cleared in applyScaleAndRoot
             // on the active→inactive transition so they don't return with
             // stale resonance baked in if the user turns NUM back up.
+            // Strum: each string gets one smooth pulse at its own offset in
+            // the sweep. Added after the gate and SENS so a strum sounds with
+            // no input playing and STRENGTH alone sets its level.
+            const bool strumming = fStrumActive;
+            if (strumming && ++fStrumClock > fStrumEnd)
+                fStrumActive = false;
+
             float bridgeAcc = 0.0f;
             for (uint32_t s = 0; s < kNumStrings; ++s)
             {
                 if (!fStringActive[s]) continue;
-                const float v = fCombs[s].process(stringInput);
+                float excite = 0.0f;
+                if (strumming && fStrumClock >= fStrumStart[s])
+                {
+                    const uint32_t t = fStrumClock - fStrumStart[s];
+                    if (t < fStrumWidth[s])
+                        excite = fStrumAmp * fStrumPluck[s * fStrumPluckLen + t];
+                }
+                const float v = fCombs[s].process(stringInput + excite);
                 wetL += v * fPanL[s];
                 wetR += v * fPanR[s];
                 bridgeAcc += v;
@@ -1010,6 +1090,97 @@ protected:
 
 private:
     // ---------------- Helpers ----------------
+
+    /**
+       Schedule one pluck per active string, low -> high for up, high -> low
+       for down, spread evenly over the sweep time.
+
+       Each pluck is Karplus-Strong: one period P of fresh white noise, run
+       through a Jaffe-Smith pluck-position comb (w[n] - w[n - beta*P]) —
+       the harmonic notches of a string plucked near the bridge, the thin,
+       nasal sitar colour. Every strum gets new noise, so no two sound
+       quite alike. Then:
+         - zero mean: any DC rings each comb's 0 Hz mode, the slowest to
+           decay (the in-loop damping LPF passes DC), and the strum thumps;
+         - unit energy per string (RMS 1/sqrt 3, as a ±1 ramp): a raw noise
+           period's harmonics land at random, ~4 dB spread across strings.
+       One period long, so it never overlaps its own first echo.
+       The strum eases in: the first strings are plucked softer, smoothstep
+       from kStrumRampStart up to full strength by kStrumRampFrac of the way
+       through, like a hand entering the strings. Without it an up strum
+       opens on the lowest, longest-ringing string at full force out of
+       silence and lands as a kick; a down strum builds up on its own, but
+       the ramp suits it too.
+       Tried and rejected by ear: drawn shapes (smooth pulse: thump; ± square
+       doublet: palm-muted; sawtooth: fake and bass-heavy), and low-passing
+       the noise (warmer but duller).
+       Re-triggering mid-strum restarts from the new direction's first string;
+       ringing strings are left alone.
+     */
+    void startStrum(const bool up)
+    {
+        if (fAuditionActive || fStrumPluck.empty()) return;
+
+        uint32_t order[kNumStrings];
+        uint32_t count = 0;
+        for (uint32_t i = 0; i < kNumStrings; ++i)
+        {
+            fStrumStart[i] = UINT32_MAX;        // not in this strum: never fires
+            if (fStringActive[i]) order[count++] = i;
+        }
+        if (count == 0) return;
+
+        const float sweep = fStrumTimeMs * 0.001f * fSampleRate;
+        fStrumEnd = 0;
+        for (uint32_t k = 0; k < count; ++k)
+        {
+            const uint32_t s = order[up ? k : count - 1 - k];
+            fStrumStart[s] = 1 + static_cast<uint32_t>(
+                count > 1 ? sweep * static_cast<float>(k) / static_cast<float>(count - 1) : 0.0f);
+            // Whole samples, rounded down so the pluck ends before its echo.
+            uint32_t period = static_cast<uint32_t>(fSampleRate / fStringFreqs[s]);
+            if (period > fStrumPluckLen) period = fStrumPluckLen;
+            fStrumWidth[s] = period > 2u ? period : 2u;
+            const float span = kStrumRampFrac * static_cast<float>(count - 1);
+            float u = span > 0.0f ? static_cast<float>(k) / span : 1.0f;
+            if (u > 1.0f) u = 1.0f;
+            const float ramp = kStrumRampStart + (1.0f - kStrumRampStart) * u * u * (3.0f - 2.0f * u);
+            fillPluck(&fStrumPluck[s * fStrumPluckLen], fStrumWidth[s], ramp);
+            if (fStrumStart[s] + fStrumWidth[s] > fStrumEnd)
+                fStrumEnd = fStrumStart[s] + fStrumWidth[s];
+        }
+
+        fStrumAmp    = 2.0f * fStrumLevel;
+        fStrumClock  = 0;
+        fStrumActive = true;
+    }
+
+    // One Karplus-Strong pluck of length n into e[], scaled by level (see
+    // startStrum).
+    void fillPluck(float* const e, const uint32_t n, const float level)
+    {
+        for (uint32_t i = 0; i < n; ++i)
+        {
+            fStrumNoiseSeed = fStrumNoiseSeed * 1664525u + 1013904223u;
+            e[i] = static_cast<float>(static_cast<int32_t>(fStrumNoiseSeed)) / 2147483648.0f;
+        }
+        // Pluck-position comb, in place from the end so e[i - m] is still raw.
+        const uint32_t m = static_cast<uint32_t>(kStrumPluckPos * static_cast<float>(n) + 0.5f);
+        for (uint32_t i = n; i-- > m; )
+            e[i] -= e[i - m];
+
+        double mean = 0.0;
+        for (uint32_t i = 0; i < n; ++i) mean += e[i];
+        mean /= n;
+        double sumSq = 0.0;
+        for (uint32_t i = 0; i < n; ++i)
+        {
+            e[i] -= static_cast<float>(mean);
+            sumSq += static_cast<double>(e[i]) * e[i];
+        }
+        const float gain = sumSq > 0.0 ? level * static_cast<float>(std::sqrt(n / (3.0 * sumSq))) : 0.0f;
+        for (uint32_t i = 0; i < n; ++i) e[i] *= gain;
+    }
 
     void retuneString(uint32_t i)
     {
@@ -1213,6 +1384,14 @@ private:
     // stereo field.
     static constexpr float kHalfPi = 1.5707963267948966f;
 
+    // Pluck point as a fraction of string length: near the bridge, like a
+    // mizrab stroke. Not 1/n, which would null every nth harmonic.
+    static constexpr float kStrumPluckPos = 0.13f;
+    // Strum ease-in (see startStrum): first pluck at half strength, full by
+    // 70% of the strings. Picked by ear from A/B renders (15-50% starts).
+    static constexpr float kStrumRampStart = 0.5f;
+    static constexpr float kStrumRampFrac  = 0.7f;
+
     CombFilter fCombs[kNumStrings];
 
     // fStringFreqs[i] is the effective frequency for slot i. Slots beyond
@@ -1293,6 +1472,23 @@ private:
     uint32_t fAuditionPhaseSamples = 48000; // updated in sampleRateChanged
     uint32_t fAuditionPluckSamples = 1440;  // 30ms at 48kHz, updated below
     uint32_t fNoiseSeed            = 0x12345u;
+
+    // Strum: per-string pluck schedule, in samples since the trigger (see
+    // startStrum). DPF calls setParameterValue on the audio thread between
+    // run() calls, so run() never sees a half-written schedule.
+    float    fStrumTimeMs = 250.0f;
+    float    fStrumLevel  = 0.25f;
+    float    fStrumAmp    = 1.0f;
+    float    fSampleRate  = 48000.0f;
+    bool     fStrumActive = false;
+    uint32_t fStrumClock  = 0;
+    uint32_t fStrumEnd    = 0;
+    uint32_t fStrumStart[kNumStrings] {};
+    uint32_t fStrumWidth[kNumStrings] {};   // pluck length = one period
+    // Per-string pluck samples, kNumStrings x fStrumPluckLen (see fillPluck).
+    std::vector<float> fStrumPluck;
+    uint32_t fStrumPluckLen  = 0;
+    uint32_t fStrumNoiseSeed = 0x2468u;
 
     float fPanL[kNumStrings] {};
     float fPanR[kNumStrings] {};

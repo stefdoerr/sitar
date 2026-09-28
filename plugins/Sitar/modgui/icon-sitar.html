@@ -88,9 +88,25 @@
                 <span class="sitar-test-icon">&#9654;</span>
             </div>
         </div>
+
+        <div class="sitar-field">
+            <span class="sitar-field-label">STRUM</span>
+            <div class="sitar-test-btn mod-toggle off" title="Strum up (low to high)"
+                 mod-role="input-control-port"
+                 mod-port-symbol="strum_up"
+                 mod-widget="switch">
+                <span class="sitar-strum-icon">&#8593;</span>
+            </div>
+            <div class="sitar-test-btn mod-toggle off" title="Strum down (high to low)"
+                 mod-role="input-control-port"
+                 mod-port-symbol="strum_down"
+                 mod-widget="switch">
+                <span class="sitar-strum-icon">&#8595;</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Knob row grouped by signal path: Input · Pitch · Resonance · Output -->
+    <!-- Knob row grouped by signal path: Input · Pitch · Resonance · Output · Strum -->
     <div class="sitar-sections">
         <div class="sitar-sec">
             <span class="sitar-sec-title">Input</span>
@@ -148,6 +164,20 @@
                 <div class="mod-knob sitar-knob-tone">
                     <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="level"></div>
                     <span class="mod-knob-title">LEVEL</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sitar-sec">
+            <span class="sitar-sec-title">Strum</span>
+            <div class="sitar-sec-knobs">
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="strum_time"></div>
+                    <span class="mod-knob-title">SWEEP</span>
+                </div>
+                <div class="mod-knob sitar-knob-tone">
+                    <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="strum_level"></div>
+                    <span class="mod-knob-title">STRENGTH</span>
                 </div>
             </div>
         </div>

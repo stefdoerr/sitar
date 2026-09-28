@@ -8,13 +8,13 @@
  *     reflow them. MOD provides the default visuals for .mod-input/.mod-output,
  *     .mod-knob-image, .mod-light, .mod-footswitch; we only place them.
  *
- * NOTE: .sitar-pedal height must stay in sync with HEIGHT in
+ * NOTE: .sitar-pedal width/height must stay in sync with WIDTH/HEIGHT in
  * modgui/render_screenshot.py.
  */
 
 /* ============================ Pedal frame ============================ */
 .sitar-pedal {
-    width: 640px;
+    width: 800px;
     height: 220px;
     position: absolute;
     border-radius: 14px;
@@ -170,6 +170,11 @@
     font-size: 11px;
     line-height: 1;
     margin-left: 1px;
+}
+.sitar-pedal .sitar-strum-icon {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 /* ============================ Knob sprite ============================ */
