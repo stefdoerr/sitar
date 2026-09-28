@@ -220,12 +220,27 @@ is the terse engineering version.)
   Scale × OCT × STRINGS × DECAY × BLOOM settings ran away (strings
   sustaining or growing on their own); now none do (`test_ring_time`
   keeps four of those cases as regressions).
-* **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
-  buzz of a real sitar's *jawari* bridge. Level-neutral: the saturated
-  path is normalized for small-signal unity and blended in by the knob,
-  so JAWARI adds harmonics without boosting the wet level or stepping
-  when it engages. A ~3.5 kHz one-pole tilt-down LPF fades in with the
-  knob to tame the brittle top-end harmonics the saturator generates.
+* **Jawari** — the sitar's vowel sweep ("ee-eh-ah-oh-oo") on every string
+  (`VowelSweep.hpp`). On a sitar the string rolls over the curved jawari
+  bridge; as its swing decays the contact point moves and the band of
+  overtones it excites sweeps down. Modelled perceptually: per string, a
+  peak-following envelope places a resonant band-pass (Q 3) from ~4 kHz at
+  the attack down to ~350 Hz as that string's ring fades 30 dB below its own
+  peak, added on top like a wah, with a touch of tanh buzz; the knob is the
+  depth. It shapes what you hear; Bloom still couples the raw strings.
+  Physical bridge models were tried first and measured on a single string:
+  a displacement-modulated delay (Välimäki-style) made the string duller, a
+  one-sided barrier added a static buzz at one harmonic and ate ~11 dB —
+  the real sweep needs distributed contact over the curved bridge, a much
+  bigger and costlier model. Cost: per-string filters retune every 16
+  samples; 48 strings at JAWARI 1 measured 5.3% vs 3.7% of real time on a
+  desktop (13.4% before those optimisations). Around −4 dB under a steady
+  drive (the formant parks at 4 kHz), about level-neutral on plucked notes.
+  Replaced a wet-sum tanh saturator + 3.5 kHz tilt.
+* **Lead** (`lead_jawari`, default 0) — the same vowel sweep on your *dry*
+  sound, following each of your notes; retunes every sample for sharp guitar
+  attacks. At 0 the dry path is bit-identical to the input. The strings
+  still hear the clean input.
 * **Mix** — equal-power dry/wet crossfade (`dry·cos(mix·π/2) +
   wet·sin(mix·π/2)`) so the output stays at roughly constant power
   across the knob.

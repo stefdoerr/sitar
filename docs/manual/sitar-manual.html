@@ -353,22 +353,23 @@ a { color: var(--gold-d); text-decoration: none; }
     <h2>The controls</h2>
     <div class="pedal-map">
         <img src="../../plugins/Sitar/modgui/screenshot-sitar.png" alt="Sympathetic Sitar control layout">
-        <span class="pin" style="left:17.8%; top:31.4%;">1</span>
-        <span class="pin" style="left:40.6%; top:31.4%;">2</span>
-        <span class="pin" style="left:63.6%; top:31.4%;">3</span>
-        <span class="pin" style="left:78.9%; top:31.4%;">4</span>
-        <span class="pin" style="left:92.4%; top:31.4%;">5</span>
-        <span class="pin" style="left:6.5%; top:62.7%;">6</span>
-        <span class="pin" style="left:14.25%; top:62.7%;">7</span>
-        <span class="pin" style="left:24.4%; top:62.7%;">8</span>
-        <span class="pin" style="left:32.1%; top:62.7%;">9</span>
-        <span class="pin" style="left:42.25%; top:62.7%;">10</span>
-        <span class="pin" style="left:50.0%; top:62.7%;">11</span>
-        <span class="pin" style="left:57.75%; top:62.7%;">12</span>
-        <span class="pin" style="left:67.9%; top:62.7%;">13</span>
-        <span class="pin" style="left:75.6%; top:62.7%;">14</span>
-        <span class="pin" style="left:85.75%; top:62.7%;">15</span>
-        <span class="pin" style="left:93.5%; top:62.7%;">16</span>
+        <span class="pin" style="left:20.1%; top:31.4%;">1</span>
+        <span class="pin" style="left:41.3%; top:31.4%;">2</span>
+        <span class="pin" style="left:62.6%; top:31.4%;">3</span>
+        <span class="pin" style="left:76.9%; top:31.4%;">4</span>
+        <span class="pin" style="left:89.3%; top:31.4%;">5</span>
+        <span class="pin" style="left:6.0%; top:62.7%;">6</span>
+        <span class="pin" style="left:13.2%; top:62.7%;">7</span>
+        <span class="pin" style="left:22.6%; top:62.7%;">8</span>
+        <span class="pin" style="left:29.8%; top:62.7%;">9</span>
+        <span class="pin" style="left:39.2%; top:62.7%;">10</span>
+        <span class="pin" style="left:46.4%; top:62.7%;">11</span>
+        <span class="pin" style="left:53.6%; top:62.7%;">12</span>
+        <span class="pin" style="left:63.0%; top:62.7%;">13</span>
+        <span class="pin" style="left:70.2%; top:62.7%;">14</span>
+        <span class="pin" style="left:77.4%; top:62.7%;">15</span>
+        <span class="pin" style="left:86.8%; top:62.7%;">16</span>
+        <span class="pin" style="left:94.0%; top:62.7%;">17</span>
     </div>
 
     <h3>Selectors &amp; buttons</h3>
@@ -470,15 +471,26 @@ a { color: var(--gold-d); text-decoration: none; }
         </div>
         <div class="knob">
             <h4><span class="badge">12</span> JAWARI</h4>
-            <p>The <b>buzzing bridge</b> of a real sitar — a gentle, singing grit on
-               the ringing strings. Adds character, not loudness.</p>
+            <p>The <b>buzzing bridge</b> of a real sitar. Each ringing string sings its
+               own vowel as it fades &mdash; a bright &ldquo;ee&rdquo; at the pluck
+               gliding down to a dark &ldquo;oo&rdquo;.</p>
             <ul>
                 <li><b>Off (default):</b> clean, bell-like ringing</li>
-                <li><b>High:</b> full sitar buzz, tone-tamed so it never turns brittle</li>
+                <li><b>High:</b> the full sitar yowl on every string</li>
             </ul>
         </div>
         <div class="knob">
-            <h4><span class="badge">13</span> MIX</h4>
+            <h4><span class="badge">13</span> LEAD</h4>
+            <p>The same <b>vowel sweep on your own notes</b> &mdash; every note you
+               play glides from &ldquo;ee&rdquo; to &ldquo;oo&rdquo; as it decays, like
+               a sitar's main string. The strings still hear your clean sound.</p>
+            <ul>
+                <li><b>Off (default):</b> your instrument, untouched</li>
+                <li><b>High:</b> a sitar-like voice on everything you play</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">14</span> MIX</h4>
             <p>The balance between <b>your dry sound</b> and <b>the strings</b>.
                Loudness stays even across the whole sweep.</p>
             <ul>
@@ -487,14 +499,14 @@ a { color: var(--gold-d); text-decoration: none; }
             </ul>
         </div>
         <div class="knob">
-            <h4><span class="badge">14</span> LEVEL</h4>
+            <h4><span class="badge">15</span> LEVEL</h4>
             <p>Output volume trim, <b>&plusmn;12&nbsp;dB</b>, after the mix.</p>
             <ul>
                 <li>Use it to match the pedal's on/off loudness by ear</li>
             </ul>
         </div>
         <div class="knob">
-            <h4><span class="badge">15</span> SWEEP</h4>
+            <h4><span class="badge">16</span> SWEEP</h4>
             <p>How long a <b>strum</b> takes from its first string to its last
                (20&nbsp;ms&ndash;2&nbsp;s).</p>
             <ul>
@@ -504,7 +516,7 @@ a { color: var(--gold-d); text-decoration: none; }
             </ul>
         </div>
         <div class="knob">
-            <h4><span class="badge">16</span> STRENGTH</h4>
+            <h4><span class="badge">17</span> STRENGTH</h4>
             <p>How <b>hard</b> the strum plucks. Every string gets the same force, and
                each strum is plucked afresh, so no two sound quite alike.</p>
             <ul>
