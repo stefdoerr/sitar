@@ -198,14 +198,28 @@ is the terse engineering version.)
   frequencies are computed internally — there are no per-string knobs or
   ports to manage. See the manual's *Make your own scale*.
 * **Decay** with a curve that pushes the audible sustain range into the
-  lower half of the knob (knob travel ≈ change in ring time). Capped at
-  fb = 0.998 to prevent infinite resonance build-up.
+  lower half of the knob (knob travel ≈ change in ring time). The ring
+  time is the same for every string: each gets its own feedback,
+  fb^(261.63 Hz / f), so it loses the same per *second* as a C4 string
+  (a comb loses a fixed fraction per trip round its loop, so with one
+  shared feedback each octave up rang half as long and the bass drowned
+  the high shimmer). Capped at fb = 0.998 to prevent infinite resonance
+  build-up. `tests/test_ring_time.cpp` pins C3 vs C5 within ±25%.
+* **Detune** — every string sits a fixed ±3 cents off its just-intonation
+  pitch (a hash of its slot, so presets are reproducible), below the pitch
+  JND, like a human tuner. It keeps Bloom stable: JI strings share exact
+  partials (Major at OCT 2: five strings at 981 Hz), which stacks the
+  bridge loop gain; a few cents splits them by several resonance widths.
 * **Bloom** — shared bridge-bus cross-coupling: every active string is fed
   a small fraction of the others' output through a DC-blocked,
   tanh-saturated bus, mirroring how a real sitar's *tarafs* share one
   physical bridge and excite each other. Adds a subtle ring extension
-  and harmonic shimmer; coupling is scaled by the active string count to
-  stay stable across all Scale × Decay × STRINGS combinations.
+  and harmonic shimmer. The coupling limit scales with the active string
+  count and the *most resonant* string's feedback. Up to v0.3.0 it used one
+  shared feedback and exact JI partials, and 216 of 1200 swept
+  Scale × OCT × STRINGS × DECAY × BLOOM settings ran away (strings
+  sustaining or growing on their own); now none do (`test_ring_time`
+  keeps four of those cases as regressions).
 * **Jawari** — tanh soft-saturation on the wet sum, emulating the gentle
   buzz of a real sitar's *jawari* bridge. Level-neutral: the saturated
   path is normalized for small-signal unity and blended in by the knob,

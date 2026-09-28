@@ -63,13 +63,20 @@ int main()
     p.setParameterValue(SCALE, 24.0f);    // user slot 0
     p.activate();
 
+    // Relative, not absolute: a scale degree must ring clearly (>= 1.4x,
+    // +3 dB) louder than a pitch outside the scale; a scale that isn't
+    // applied gives ~1x. Absolute levels move with the string model: since
+    // equal ring time, strings below C4 get less feedback, so the G3 fifth
+    // here measures ~1.7x (it was ~2.2x) without the tuning being wrong.
+    const float off = feed(p, 130.81f * 45.0f / 32.0f, 0.02f, 120, clk);   // tritone: not in "1, 3/2"
+
     // String 1 (tonic) should ring at 130.81 Hz.
     const float ring = feed(p, 130.81f, 0.02f, 120, clk);
-    if (ring < 0.03f) { std::printf("FAIL: user-scale tonic not resonating (rms %.5f)\n", ring); ++fail; }
+    if (ring < 1.4f * off) { std::printf("FAIL: user-scale tonic not resonating (rms %.5f vs off-scale %.5f)\n", ring, off); ++fail; }
 
     // Its second degree (3/2) -> 196.22 Hz should also ring.
     const float fifth = feed(p, 130.81f * 1.5f, 0.02f, 120, clk);
-    if (fifth < 0.03f) { std::printf("FAIL: user-scale 3/2 degree not resonating (rms %.5f)\n", fifth); ++fail; }
+    if (fifth < 1.4f * off) { std::printf("FAIL: user-scale 3/2 degree not resonating (rms %.5f vs off-scale %.5f)\n", fifth, off); ++fail; }
 
     // Selecting an EMPTY user slot -> silence (no populated strings).
     p.setParameterValue(SCALE, 25.0f);    // user slot 1 (empty)
@@ -78,6 +85,6 @@ int main()
     if (silent > 0.02f) { std::printf("FAIL: empty user slot still resonates (rms %.5f)\n", silent); ++fail; }
 
     if (fail) return 1;
-    std::printf("ok: user scale applies + retunes; empty slot is silent\n");
+    std::printf("ok: user scale applies + retunes (tonic %.4f, fifth %.4f vs off-scale %.4f); empty slot is silent\n", ring, fifth, off);
     return 0;
 }

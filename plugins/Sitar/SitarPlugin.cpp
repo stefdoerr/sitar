@@ -857,8 +857,13 @@ protected:
         // its frequency to 0 and fStringActive to false, so we just count
         // the active flags here.
         uint32_t activeCount = 0;
+        float    maxFeedback = 0.0f;   // most resonant active string: bloom's stability bound
         for (uint32_t s = 0; s < kNumStrings; ++s)
-            if (fStringActive[s]) ++activeCount;
+            if (fStringActive[s])
+            {
+                ++activeCount;
+                if (fStringFeedback[s] > maxFeedback) maxFeedback = fStringFeedback[s];
+            }
         const float stringNorm = activeCount > 0
             ? 1.0f / std::sqrt(static_cast<float>(activeCount))
             : 0.0f;
@@ -877,10 +882,12 @@ protected:
         // bloomCoupling < N · (1 - fb) / K, and beyond that the wet-sum
         // tanh limiter catches any saturation. We scale the stability bound
         // by activeCount (not the static kNumStrings) so the bloom feedback
-        // halo behaves consistently as the user sweeps NUM STRINGS.
+        // halo behaves consistently as the user sweeps NUM STRINGS. With
+        // per-string feedback, fb is the largest active one — the string
+        // closest to self-oscillation sets the limit.
         const float stableMax = 0.3f
             * static_cast<float>(activeCount > 0 ? activeCount : 1)
-            * (1.0f - fFeedback);
+            * (1.0f - maxFeedback);
         const float bloomCouplingMax = stableMax < kBloomCouplingCap
             ? stableMax : kBloomCouplingCap;
         const float bloomCoupling = fBloom * bloomCouplingMax;
@@ -1191,6 +1198,44 @@ private:
         float target = fStringFreqs[i];
         if (target < kMinAllowedHz) target = kMinAllowedHz;
         fCombs[i].setFrequency(target);
+        applyStringFeedback(i);
+    }
+
+    /**
+       A fixed per-string detune in ±kDetuneCents, like a human tuner: below
+       the ~5-10 cent pitch JND, so no string sounds out of tune. It matters
+       for Bloom: just-intonation strings share exact partials (in Major at
+       OCT 2, C2 G2 E2 A2 B2 all have one at 981 Hz), and when K strings
+       resonate at one frequency the bridge loop gain grows with K. A few
+       cents splits those partials by several resonance widths (~1 Hz at
+       DECAY 0.7), so they beat gently instead of stacking into a runaway.
+       Fixed per slot (hash of the index), so a preset always sounds the same.
+     */
+    static float stringDetune(uint32_t i)
+    {
+        uint32_t h = (i + 1u) * 2654435761u;
+        h ^= h >> 15; h *= 2246822519u; h ^= h >> 13;
+        const float u = static_cast<float>(h & 0xFFFFu) / 65535.0f * 2.0f - 1.0f;   // -1..1
+        return std::pow(2.0f, u * kDetuneCents / 1200.0f);
+    }
+
+    /**
+       Per-string feedback for a pitch-independent ring time. A comb loses a
+       fixed fraction per trip round its loop, so with one shared feedback a
+       string an octave up makes twice the trips and rings half as long — the
+       low strings outlast and drown the high shimmer, and turning OCT up
+       quietly shortened everything. Instead each string gets fFeedback (the
+       DECAY feedback of a kRingRefHz string) raised to kRingRefHz / f: the
+       same loss per second, so DECAY is one ring time for every string at
+       any OCT/scale. Capped at kMaxFeedback like the shared value was, so at
+       high DECAY the top strings ring a little short of the target.
+     */
+    void applyStringFeedback(uint32_t i)
+    {
+        const float f = fStringFreqs[i] > kMinAllowedHz ? fStringFreqs[i] : kMinAllowedHz;
+        const float g = std::pow(fFeedback, kRingRefHz / f);
+        fStringFeedback[i] = g < kMaxFeedback ? g : kMaxFeedback;
+        fCombs[i].setFeedback(fStringFeedback[i]);
     }
 
     void retuneAllStrings()
@@ -1322,7 +1367,8 @@ private:
                 const uint32_t octaves  = i / n;
                 freq = rootHz * activeScale->ratios[scaleIdx]
                               * std::pow(2.0f, static_cast<float>(octaves))
-                              * octMul;
+                              * octMul
+                              * stringDetune(i);
                 if (freq > kStringMaxHz) freq = kStringMaxHz;
                 active = (freq >= kMinAllowedHz);
             }
@@ -1363,19 +1409,20 @@ private:
         // (fb ≈ 0.97 at decay=0.5) but levels off below 0.998 (max ring
         // ~2.5 s at the lowest string, max gain ~333×, which the wet-output
         // tanh in run() can soft-clip safely).
-        const float fb   = 0.998f * (1.0f - std::exp(-7.0f * fDecay));
+        //
+        // fb is the feedback of a kRingRefHz (C4) string; every string gets
+        // its own for the same ring time in seconds (applyStringFeedback).
+        const float fb   = kMaxFeedback * (1.0f - std::exp(-7.0f * fDecay));
         // Damping (1-pole LPF coeff inside the loop). Kept fairly close to
         // 1.0 even at short decays so the high-frequency loss doesn't smother
         // the ring before feedback alone has a chance to decay it.
         const float damp = 0.95f + 0.049f * fDecay;     // 0.95 .. 0.999
+        fFeedback = fb;
         for (uint32_t i = 0; i < kNumStrings; ++i)
         {
-            fCombs[i].setFeedback(fb);
+            applyStringFeedback(i);
             fCombs[i].setDamping(damp);
         }
-        // Cache the effective feedback so run() can derive a stable bloom
-        // coupling from it (the CombFilter clamps to <= 0.99999 internally).
-        fFeedback = fb < 0.99999f ? fb : 0.99999f;
     }
 
     // Equal-power pan: theta in [0, pi/2]; -1 -> all-left, +1 -> all-right.
@@ -1423,9 +1470,15 @@ private:
     // Previous bridge-raw value for the one-pole DC blocker.
     float fBridgeDcX   = 0.0f;
 
-    // Cached comb-filter feedback coefficient, set in applyDecay(). Used by
-    // run() to derive the stable bloom-coupling max for the current Decay.
+    // DECAY's feedback for a kRingRefHz string, set in applyDecay(); each
+    // string's own, for an equal ring time, is fStringFeedback[] (see
+    // applyStringFeedback). run() takes the bloom stability bound from the
+    // largest active one.
     float fFeedback = 0.0f;
+    float fStringFeedback[kNumStrings] {};
+    static constexpr float kRingRefHz   = 261.63f;   // C4
+    static constexpr float kDetuneCents = 3.0f;      // see stringDetune
+    static constexpr float kMaxFeedback = 0.998f;
 
     // Noise-gate state. fGateEnvelope is the running peak-with-release
     // envelope of the input; fGateOpen is the smoothed gate-state in [0,1]
