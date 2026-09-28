@@ -196,6 +196,7 @@ public:
         kParamStrumDown,                      // trigger, strum high -> low
         kParamStrumTime,                      // strum sweep duration, ms
         kParamStrumLevel,                     // strum pluck strength (0..1)
+        kParamLeadJawari,                     // vowel-sweep buzz on the dry sound (0..1)
         kNumParams
     };
 
@@ -333,6 +334,7 @@ protected:
         case kParamDecay: case kParamBloom: case kParamJawari:
             return kGroupResonance;
         case kParamStereoMode: case kParamMix: case kParamLevel:
+        case kParamLeadJawari:
             return kGroupOutput;
         case kParamStrumUp: case kParamStrumDown:
         case kParamStrumTime: case kParamStrumLevel:
@@ -465,6 +467,18 @@ protected:
             parameter.ranges.def = 1.0f;   // light default — tames noise floor without cutting playing
             break;
 
+        case kParamLeadJawari:
+            // Appended last so no existing port index moves; its group puts
+            // it after LEVEL in the host's view anyway.
+            parameter.hints      = kParameterIsAutomatable;
+            parameter.name       = "Lead Jawari";
+            parameter.shortName  = "Lead";
+            parameter.symbol     = "lead_jawari";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;   // off: existing pedalboards sound unchanged
+            break;
+
         case kParamLevel:
             // Output trim, applied AFTER the equal-power dry/wet crossfade.
             // ±12 dB matches standard reverb-pedal output trims (Strymon,
@@ -568,6 +582,7 @@ protected:
         case kParamStereoMode:   return static_cast<float>(fStereoMode);
         case kParamGate:         return fGateThreshold;
         case kParamLevel:        return fLevel;
+        case kParamLeadJawari:   return fLeadJawari;
         case kParamSensitivity:  return fSensitivity;
         case kParamStrumTime:    return fStrumTimeMs;
         case kParamStrumLevel:   return fStrumLevel;
@@ -694,6 +709,11 @@ protected:
             if (value >  12.0f) value =  12.0f;
             fLevel = value;
             break;
+        case kParamLeadJawari:
+            if (value < 0.0f) value = 0.0f;
+            if (value > 1.0f) value = 1.0f;
+            fLeadJawari = value;
+            break;
         case kParamSensitivity:
             if (value < 0.0f) value = 0.0f;
             if (value > 1.0f) value = 1.0f;
@@ -767,6 +787,7 @@ protected:
         fJawariLpfL    = 0.0f;
         fJawariLpfR    = 0.0f;
         fStrumActive   = false;
+        fLeadEnv = fLeadPeak = fLeadIc1 = fLeadIc2 = 0.0f;
     }
 
     void sampleRateChanged(double newSampleRate) override
@@ -784,6 +805,8 @@ protected:
         // allocated here (not on the audio thread), as the combs are.
         fStrumPluckLen = maxDelay;
         fStrumPluck.assign(static_cast<size_t>(kNumStrings) * maxDelay, 0.0f);
+        fLeadEnvRel  = std::exp(-1.0f / (fSampleRate * 0.060f));   // 60 ms note envelope
+        fLeadPeakRel = std::exp(-1.0f / (fSampleRate * 1.5f));     // 1.5 s peak hold
 
         // Gate envelope/release/smoothing coefficients:
         //   - envelope release: 80 ms half-life so brief drops within a note
@@ -1090,8 +1113,9 @@ protected:
                 wetR += jawari * (fJawariLpfR - wetR);
             }
 
-            outL[f] = (dryGain * x + wetGain * wetL) * levelLin;
-            outR[f] = (dryGain * x + wetGain * wetR) * levelLin;
+            const float dry = fLeadJawari > 0.0f ? leadJawari(x) : x;
+            outL[f] = (dryGain * dry + wetGain * wetL) * levelLin;
+            outR[f] = (dryGain * dry + wetGain * wetR) * levelLin;
         }
     }
 
@@ -1187,6 +1211,44 @@ private:
         }
         const float gain = sumSq > 0.0 ? level * static_cast<float>(std::sqrt(n / (3.0 * sumSq))) : 0.0f;
         for (uint32_t i = 0; i < n; ++i) e[i] *= gain;
+    }
+
+    /**
+       LEAD jawari on the dry sound: the sitar's vowel sweep ("ee-eh-ah-oh-oo")
+       on your own notes. On a sitar the main string rolls over the curved
+       jawari bridge; as its swing decays the contact point moves and the band
+       of overtones it excites sweeps down. Here a peak-following envelope
+       places a resonant band-pass (Q 3) from ~4 kHz at each note's attack
+       down to ~350 Hz as it fades 30 dB below its own peak, added on top of
+       the note like a wah, with a touch of tanh buzz. Following each note's
+       own peak (not absolute level) makes it sweep the same at any playing
+       level. Level-neutral at 1.0 (kTrim). Picked by ear from A/B
+       renders; the strings still hear the clean input.
+     */
+    float leadJawari(const float x)
+    {
+        const float ax = std::fabs(x);
+        fLeadEnv  = ax > fLeadEnv ? ax : fLeadEnv * fLeadEnvRel;          // instant attack
+        fLeadPeak = fLeadEnv > fLeadPeak ? fLeadEnv : fLeadPeak * fLeadPeakRel;
+        const float rel = fLeadPeak > 1e-6f ? fLeadEnv / fLeadPeak : 0.0f;
+        float sweep = 1.0f + 20.0f * std::log10(rel + 1e-6f) / 30.0f;    // 0 .. -30 dB -> 1 .. 0
+        sweep = sweep < 0.0f ? 0.0f : (sweep > 1.0f ? 1.0f : sweep);
+        const float fc = 350.0f * std::pow(4000.0f / 350.0f, sweep);
+
+        // Simper TPT state-variable band-pass, unit peak gain.
+        const float g  = std::tan(2.0f * kHalfPi * fc / fSampleRate);    // tan(pi fc / fs)
+        const float k  = 1.0f / 3.0f;                                     // Q 3
+        const float a1 = 1.0f / (1.0f + g * (g + k)), a2 = g * a1, a3 = g * a2;
+        const float sat = std::tanh(3.0f * x) / 3.0f;                     // light buzz
+        const float v3 = sat - fLeadIc2;
+        const float v1 = a1 * fLeadIc1 + a2 * v3;
+        const float v2 = fLeadIc2 + a2 * fLeadIc1 + a3 * v3;
+        fLeadIc1 = 2.0f * v1 - fLeadIc1;
+        fLeadIc2 = 2.0f * v2 - fLeadIc2;
+
+        constexpr float kFormant = 2.0f, kBuzz = 0.5f, kTrim = 0.46f;
+        const float j = fLeadJawari;
+        return (x + j * (kFormant * k * v1 + kBuzz * (sat - x))) / (1.0f + kTrim * j);
     }
 
     void retuneString(uint32_t i)
@@ -1541,6 +1603,12 @@ private:
     // Per-string pluck samples, kNumStrings x fStrumPluckLen (see fillPluck).
     std::vector<float> fStrumPluck;
     uint32_t fStrumPluckLen  = 0;
+
+    // LEAD jawari state (see leadJawari).
+    float fLeadJawari  = 0.0f;
+    float fLeadEnv     = 0.0f, fLeadPeak = 0.0f;
+    float fLeadIc1     = 0.0f, fLeadIc2  = 0.0f;
+    float fLeadEnvRel  = 0.0f, fLeadPeakRel = 0.0f;
     uint32_t fStrumNoiseSeed = 0x2468u;
 
     float fPanL[kNumStrings] {};

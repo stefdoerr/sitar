@@ -33,7 +33,7 @@ SPRITE = os.path.join(HERE, "knobs", "sitar-knob.png")
 OUT    = os.path.join(HERE, "screenshot-sitar.png")
 OUT_EDITOR = os.path.join(HERE, "screenshot-editor.png")
 
-WIDTH  = 800
+WIDTH  = 862
 HEIGHT = 220
 # Device pixel ratio for the render. 2x keeps the same WIDTHxHEIGHT CSS layout but
 # outputs it at 2x — crisper on HiDPI screens and in the printed manual. The
