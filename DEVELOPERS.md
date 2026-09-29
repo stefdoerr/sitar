@@ -236,7 +236,10 @@ is the terse engineering version.)
   samples; 48 strings at JAWARI 1 measured 5.3% vs 3.7% of real time on a
   desktop (13.4% before those optimisations). Around −4 dB under a steady
   drive (the formant parks at 4 kHz), about level-neutral on plucked notes.
-  Replaced a wet-sum tanh saturator + 3.5 kHz tilt.
+  Replaced a wet-sum tanh saturator + 3.5 kHz tilt. A two-formant version
+  (F1/F2 following measured i-e-a-o-u vowel formants, Q 3 and Q 6) was
+  A/B'd too: the waveforms differed a lot (-6 dB null) but it was not
+  audibly different on plucked strings, so the single formant stays.
 * **Lead** (`lead_jawari`, default 0) — the same vowel sweep on your *dry*
   sound, following each of your notes; retunes every sample for sharp guitar
   attacks. At 0 the dry path is bit-identical to the input. The strings
