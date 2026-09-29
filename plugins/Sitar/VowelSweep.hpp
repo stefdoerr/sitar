@@ -16,7 +16,8 @@
  * enough for 48 strings on a Dwarf: the per-string sweeps retune their
  * filter every 16 samples (LEAD, a single instance on sharp guitar attacks,
  * every sample) from a table of the filter coefficient over the sweep, so
- * no pow()/tan() runs on the audio thread; the buzz is a Padé tanh.
+ * no pow()/tan() runs on the audio thread; the buzz uses a cheap rational
+ * tanh (see padeTanh).
  * Header-only so the plugin and the host-less tests link it directly.
  */
 #ifndef SITAR_VOWEL_SWEEP_HPP_INCLUDED
@@ -100,7 +101,10 @@ public:
 private:
     static constexpr float    kK      = 1.0f / 3.0f;     // 1/Q
 
-    // tanh within ~2% for |t| < 3, clamped beyond (the buzz input is small).
+    // The music-DSP "fast tanh" t(27+t²)/(27+9t²): not the true [3/2] Padé
+    // (t(15+t²)/(15+6t²)) but tuned to reach exactly 1 at t = 3 with zero
+    // slope, a smooth soft clip; ~2% off tanh inside ±3, clamped beyond.
+    // Only shapes the light buzz, and is what the approved renders used.
     static float padeTanh(const float t)
     {
         if (t >  3.0f) return  1.0f;

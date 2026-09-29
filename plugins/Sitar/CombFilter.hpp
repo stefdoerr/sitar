@@ -114,7 +114,8 @@ public:
     }
 
 private:
-    // tanh as a [5/4] Padé: one division instead of a libm call. std::tanh
+    // tanh as its [5/4] Padé approximant (Lambert's continued fraction
+    // cut after the 9): one division instead of a libm call. std::tanh
     // here was 58% of the whole plugin's time on a Dwarf at 48 strings.
     // Within 6e-8 of tanh for |x| < 1, 4e-4 for |x| < 3; the input is clamped
     // to ±3 (0.9954, continuous, never above 1).
