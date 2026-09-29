@@ -15,7 +15,8 @@
  * Used once on the dry sound (LEAD) and once per string (JAWARI). Cheap
  * enough for 48 strings on a Dwarf: the per-string sweeps retune their
  * filter every 16 samples (LEAD, a single instance on sharp guitar attacks,
- * every sample), the sweep curve is one pow(), the buzz a Padé tanh.
+ * every sample) from a table of the filter coefficient over the sweep, so
+ * no pow()/tan() runs on the audio thread; the buzz is a Padé tanh.
  * Header-only so the plugin and the host-less tests link it directly.
  */
 #ifndef SITAR_VOWEL_SWEEP_HPP_INCLUDED
@@ -35,15 +36,31 @@ public:
     // Sample-rate constants, shared by every instance.
     struct Rates
     {
+        static constexpr int kTable = 256;
         float envRel  = 0.0f;   // 60 ms note envelope release
         float peakRel = 0.0f;   // 1.5 s peak hold release
-        float piOverFs = 0.0f;
+        float g[kTable + 1] {}; // TPT coefficient tan(pi fc / fs) over rel = env/peak in 0..1
 
         void set(float fs)
         {
-            envRel   = std::exp(-1.0f / (fs * 0.060f));
-            peakRel  = std::exp(-1.0f / (fs * 1.5f));
-            piOverFs = 3.14159265f / fs;
+            envRel  = std::exp(-1.0f / (fs * 0.060f));
+            peakRel = std::exp(-1.0f / (fs * 1.5f));
+            for (int i = 0; i <= kTable; ++i)
+            {
+                // 350 Hz * (4000/350)^(1 + dB(rel)/30), 0..-30 dB -> 4 kHz..350 Hz,
+                // folded into one power: 4000 * rel^(log10(4000/350) * 2/3).
+                float fc = 4000.0f * std::pow(static_cast<float>(i) / kTable, 0.70527f);
+                fc = fc < 350.0f ? 350.0f : (fc > 4000.0f ? 4000.0f : fc);
+                g[i] = std::tan(3.14159265f * fc / fs);
+            }
+        }
+
+        float coefficient(float rel) const
+        {
+            const float pos = rel * kTable;                 // rel in 0..1 (env never exceeds peak)
+            int i = static_cast<int>(pos);
+            if (i >= kTable) return g[kTable];
+            return g[i] + (pos - static_cast<float>(i)) * (g[i + 1] - g[i]);
         }
     };
 
@@ -62,13 +79,8 @@ public:
         if (fCount-- == 0)
         {
             fCount = fUpdate - 1;
-            // 350 Hz * (4000/350)^(1 + dB(env/peak)/30), 0..-30 dB -> 4 kHz..350 Hz,
-            // folded into one power: 4000 * rel^(log10(4000/350) * 2/3).
-            const float rel = fPeak > 1e-6f ? fEnv / fPeak : 0.0f;
-            float fc = 4000.0f * std::pow(rel, 0.70527f);
-            fc = fc < 350.0f ? 350.0f : (fc > 4000.0f ? 4000.0f : fc);
             // Simper TPT state-variable band-pass, Q 3.
-            const float g = std::tan(r.piOverFs * fc);
+            const float g = r.coefficient(fPeak > 1e-6f ? fEnv / fPeak : 0.0f);
             fA1 = 1.0f / (1.0f + g * (g + kK));
             fA2 = g * fA1;
             fA3 = g * fA2;
