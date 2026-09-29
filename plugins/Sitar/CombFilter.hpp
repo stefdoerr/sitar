@@ -105,7 +105,7 @@ public:
         // feedback gain. Models the physical limit of a real sympathetic
         // string (bridge slap / friction). Linear for small signals so
         // typical play levels pass through unmodified.
-        const float fbSample = std::tanh(fLastOut * fFeedback);
+        const float fbSample = fastTanh(fLastOut * fFeedback);
         fBuffer[fWritePos] = input + fbSample;
 
         fWritePos = (fWritePos + 1) % fBufferSize;
@@ -114,6 +114,17 @@ public:
     }
 
 private:
+    // tanh as a [5/4] Padé: one division instead of a libm call. std::tanh
+    // here was 58% of the whole plugin's time on a Dwarf at 48 strings.
+    // Within 6e-8 of tanh for |x| < 1, 4e-4 for |x| < 3; the input is clamped
+    // to ±3 (0.9954, continuous, never above 1).
+    static float fastTanh(float x)
+    {
+        x = x > 3.0f ? 3.0f : (x < -3.0f ? -3.0f : x);
+        const float x2 = x * x;
+        return x * (945.0f + x2 * (105.0f + x2)) / (945.0f + x2 * (420.0f + 15.0f * x2));
+    }
+
     float* fBuffer = nullptr;
     uint32_t fBufferSize = 0;
     uint32_t fWritePos = 0;
