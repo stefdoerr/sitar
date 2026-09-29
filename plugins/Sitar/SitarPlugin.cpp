@@ -2,7 +2,7 @@
  * Sympathetic Resonance — Sitar-style string simulator.
  *
  * Up to 48 parallel tuned feedback comb filters with fractional delay,
- * a soft-clip "jawari" saturation on the summed wet signal,
+ * a jawari vowel sweep on every string (VowelSweep.hpp),
  * and an L/R spread for the stereo output bus. The 48 strings span
  * (almost) 4 octaves above the root. For scales with fewer than 12
  * notes per octave, only the first 4·notesPerOctave string slots are
@@ -16,6 +16,7 @@
 #include "DistrhoPlugin.hpp"
 #include "CombFilter.hpp"
 #include "UserScale.hpp"
+#include "VowelSweep.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -196,6 +197,7 @@ public:
         kParamStrumDown,                      // trigger, strum high -> low
         kParamStrumTime,                      // strum sweep duration, ms
         kParamStrumLevel,                     // strum pluck strength (0..1)
+        kParamLeadJawari,                     // vowel-sweep buzz on the dry sound (0..1)
         kNumParams
     };
 
@@ -333,6 +335,7 @@ protected:
         case kParamDecay: case kParamBloom: case kParamJawari:
             return kGroupResonance;
         case kParamStereoMode: case kParamMix: case kParamLevel:
+        case kParamLeadJawari:
             return kGroupOutput;
         case kParamStrumUp: case kParamStrumDown:
         case kParamStrumTime: case kParamStrumLevel:
@@ -465,6 +468,18 @@ protected:
             parameter.ranges.def = 1.0f;   // light default — tames noise floor without cutting playing
             break;
 
+        case kParamLeadJawari:
+            // Appended last so no existing port index moves; its group puts
+            // it after LEVEL in the host's view anyway.
+            parameter.hints      = kParameterIsAutomatable;
+            parameter.name       = "Lead Jawari";
+            parameter.shortName  = "Lead";
+            parameter.symbol     = "lead_jawari";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;   // off: existing pedalboards sound unchanged
+            break;
+
         case kParamLevel:
             // Output trim, applied AFTER the equal-power dry/wet crossfade.
             // ±12 dB matches standard reverb-pedal output trims (Strymon,
@@ -568,6 +583,7 @@ protected:
         case kParamStereoMode:   return static_cast<float>(fStereoMode);
         case kParamGate:         return fGateThreshold;
         case kParamLevel:        return fLevel;
+        case kParamLeadJawari:   return fLeadJawari;
         case kParamSensitivity:  return fSensitivity;
         case kParamStrumTime:    return fStrumTimeMs;
         case kParamStrumLevel:   return fStrumLevel;
@@ -694,6 +710,11 @@ protected:
             if (value >  12.0f) value =  12.0f;
             fLevel = value;
             break;
+        case kParamLeadJawari:
+            if (value < 0.0f) value = 0.0f;
+            if (value > 1.0f) value = 1.0f;
+            fLeadJawari = value;
+            break;
         case kParamSensitivity:
             if (value < 0.0f) value = 0.0f;
             if (value > 1.0f) value = 1.0f;
@@ -764,9 +785,10 @@ protected:
         fBridgeDcX     = 0.0f;
         fGateEnvelope  = 0.0f;
         fGateOpen      = 1.0f;
-        fJawariLpfL    = 0.0f;
-        fJawariLpfR    = 0.0f;
         fStrumActive   = false;
+        fLeadSweep.reset();
+        for (uint32_t i = 0; i < kNumStrings; ++i)
+            fStringSweep[i].reset();
     }
 
     void sampleRateChanged(double newSampleRate) override
@@ -784,6 +806,7 @@ protected:
         // allocated here (not on the audio thread), as the combs are.
         fStrumPluckLen = maxDelay;
         fStrumPluck.assign(static_cast<size_t>(kNumStrings) * maxDelay, 0.0f);
+        fSweepRates.set(fSampleRate);
 
         // Gate envelope/release/smoothing coefficients:
         //   - envelope release: 80 ms half-life so brief drops within a note
@@ -793,11 +816,6 @@ protected:
         const float fs = static_cast<float>(newSampleRate);
         fGateReleaseCoef = std::exp(-1.0f / (fs * 0.080f));     // 80 ms envelope release
         fGateSmoothCoef  = 1.0f - std::exp(-1.0f / (fs * 0.008f));  // 8 ms gate state smoothing
-
-        // Jawari tilt-down: one-pole LPF after the saturation tames the
-        // harsh harmonics. Corner ~3.5 kHz keeps body / presence but cuts
-        // brittle sizzle. Only applied when jawari > 0.
-        fJawariLpfCoef = 1.0f - std::exp(-2.0f * 3.14159265358979f * 3500.0f / fs);
 
         retuneAllStrings();
         applyDecay();
@@ -823,21 +841,10 @@ protected:
         const float mix     = fMix;
         const float dryGain = std::cos(mix * kHalfPi);
         const float wetGain = std::sin(mix * kHalfPi);
-        const float jawari  = fJawari;
         // Output trim: dB knob → linear scalar applied to the final stereo
         // bus. 10^(dB/20) is the standard amplitude conversion.
         const float levelLin = std::pow(10.0f, fLevel * (1.0f / 20.0f));
-
-        // Jawari drive: 1x to 8x gain into a tanh saturator, normalized for
-        // small-signal unity (1/drive) so the knob adds harmonics, not
-        // level. The saturated path is then blended in BY the knob value —
-        // the stage is exactly identity at jawari = 0, so engaging it can't
-        // step the wet level. (The old 1/tanh(drive) make-up normalized at
-        // full scale instead, which boosted realistic sub-unity wet signals
-        // by +2.4 dB the instant the knob left zero and by up to +18 dB at
-        // max drive.)
-        const float drive   = 1.0f + jawari * 7.0f;
-        const float makeUp  = 1.0f / drive;
+        const float jawari   = fJawari;
 
         // Gate state: when the input envelope drops below the threshold,
         // fGateOpen smoothly approaches 0 and the signal feeding the combs
@@ -920,7 +927,8 @@ protected:
                 for (uint32_t s = 0; s < kNumStrings; ++s)
                 {
                     if (!fStringActive[s]) continue;     // skip inactive combs entirely
-                    const float v = fCombs[s].process(s == fAuditionPhase ? excite : 0.0f);
+                    float v = fCombs[s].process(s == fAuditionPhase ? excite : 0.0f);
+                    if (jawari > 0.0f) v = fStringSweep[s].process(v, jawari, fSweepRates);
                     wetL += v * fPanL[s];
                     wetR += v * fPanR[s];
                 }
@@ -934,15 +942,6 @@ protected:
                 // Same permanent soft-clipper as normal mode.
                 wetL = std::tanh(wetL);
                 wetR = std::tanh(wetR);
-
-                if (jawari > 0.0f)
-                {
-                    // Same small-signal-unity blend as normal mode below.
-                    const float satL = std::tanh(wetL * drive) * makeUp;
-                    const float satR = std::tanh(wetR * drive) * makeUp;
-                    wetL += jawari * (satL - wetL);
-                    wetR += jawari * (satR - wetR);
-                }
 
                 // Output wet only — pass-through dry would confuse the test.
                 // Level trim applies in audition too, so a user dialling the
@@ -1043,8 +1042,11 @@ protected:
                         excite = fStrumAmp * fStrumPluck[s * fStrumPluckLen + t];
                 }
                 const float v = fCombs[s].process(stringInput + excite);
-                wetL += v * fPanL[s];
-                wetR += v * fPanR[s];
+                // JAWARI: each string's own vowel sweep, following its own
+                // ring (on what we hear; Bloom couples the raw string).
+                const float heard = jawari > 0.0f ? fStringSweep[s].process(v, jawari, fSweepRates) : v;
+                wetL += heard * fPanL[s];
+                wetR += heard * fPanR[s];
                 bridgeAcc += v;
             }
 
@@ -1067,31 +1069,13 @@ protected:
             // input near a string's resonance would otherwise drive the wet
             // sum well past ±1 and overflow the host's audio bus. tanh is
             // transparent at typical play levels (~6 % drop at wet = 0.5)
-            // and hard-bounds the output to ±1 absolutely. Jawari adds a
-            // further drive stage on top for the characteristic sitar buzz.
+            // and hard-bounds the output to ±1 absolutely.
             wetL = std::tanh(wetL);
             wetR = std::tanh(wetR);
 
-            if (jawari > 0.0f)
-            {
-                const float satL = std::tanh(wetL * drive) * makeUp;
-                const float satR = std::tanh(wetR * drive) * makeUp;
-                wetL += jawari * (satL - wetL);
-                wetR += jawari * (satR - wetR);
-
-                // Tilt-down: one-pole LPF at ~3.5 kHz tames the brittle
-                // top-end harmonics jawari's tanh saturation generates. Per
-                // channel so stereo image is preserved. Blended by the same
-                // knob weight so the cut fades in with the buzz instead of
-                // snapping to full filtering at 0+.
-                fJawariLpfL = fJawariLpfCoef * wetL + (1.0f - fJawariLpfCoef) * fJawariLpfL;
-                fJawariLpfR = fJawariLpfCoef * wetR + (1.0f - fJawariLpfCoef) * fJawariLpfR;
-                wetL += jawari * (fJawariLpfL - wetL);
-                wetR += jawari * (fJawariLpfR - wetR);
-            }
-
-            outL[f] = (dryGain * x + wetGain * wetL) * levelLin;
-            outR[f] = (dryGain * x + wetGain * wetR) * levelLin;
+            const float dry = fLeadJawari > 0.0f ? fLeadSweep.process(x, fLeadJawari, fSweepRates) : x;
+            outL[f] = (dryGain * dry + wetGain * wetL) * levelLin;
+            outR[f] = (dryGain * dry + wetGain * wetR) * levelLin;
         }
     }
 
@@ -1501,11 +1485,6 @@ private:
     // build-up at any given input level.
     float fSensitivity      = 1.0f;
 
-    // One-pole LPF state for the post-jawari tilt-down EQ (per channel).
-    float fJawariLpfL    = 0.0f;
-    float fJawariLpfR    = 0.0f;
-    float fJawariLpfCoef = 1.0f;
-
     uint32_t fScaleIdx = 0;
     uint32_t fRootIdx  = 0;
 
@@ -1541,6 +1520,13 @@ private:
     // Per-string pluck samples, kNumStrings x fStrumPluckLen (see fillPluck).
     std::vector<float> fStrumPluck;
     uint32_t fStrumPluckLen  = 0;
+
+    // Jawari vowel sweeps (VowelSweep.hpp): LEAD on the dry sound, JAWARI on
+    // every string. The dry sound's strings hear the clean input.
+    float fLeadJawari = 0.0f;
+    sitar::VowelSweep        fLeadSweep { 1 };   // retune every sample: sharp attacks
+    sitar::VowelSweep        fStringSweep[kNumStrings];
+    sitar::VowelSweep::Rates fSweepRates;
     uint32_t fStrumNoiseSeed = 0x2468u;
 
     float fPanL[kNumStrings] {};

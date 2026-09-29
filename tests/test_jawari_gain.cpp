@@ -1,15 +1,19 @@
 /*
- * Regression test: the JAWARI stage must not act as a wet-level boost.
+ * Regression test: JAWARI, the per-string vowel sweep (VowelSweep.hpp).
  *
- * The old make-up gain (1/tanh(drive)) normalized the saturator at full
- * scale, which for realistic (sub-unity) wet levels meant a gain of
- * drive/tanh(drive): a +2.4 dB step the instant the knob left zero, and
- * up to +18 dB of boost at full drive. JAWARI should add buzz, not level:
+ * JAWARI adds the sitar's buzz and vowel sweep, not level (an older
+ * wet-sum saturator once stepped the level +2.4 dB off zero, +18 dB at max):
  *
  *   1. Continuity: jawari = 0 vs jawari = 0.001 must produce essentially
  *      the same steady-state wet level (no audible step when engaging).
  *   2. No boost: jawari = 1 must not make a quiet wet signal louder than
- *      jawari = 0 (a little quieter is fine — saturation + tilt LPF).
+ *      jawari = 0. Quieter is expected under a steady drive (~-4 dB): the
+ *      envelope sits at its peak, so the formant parks at 4 kHz and adds
+ *      little while the level trim still applies. On plucked notes it is
+ *      about level-neutral.
+ *   3. The sweep: one plucked string's formant (where JAWARI 1 boosts most
+ *      over JAWARI 0) starts high at the attack (> 1.2 kHz) and has fallen
+ *      below 700 Hz half a second later, following the string's own ring.
  *
  * Build:
  *   g++ -std=gnu++14 -g -O0 -fsanitize=address \
@@ -122,6 +126,63 @@ int main()
     if (failures != 0)
         return 1;
 
-    std::printf("ok: jawari is continuous at 0 and adds no level boost\n");
+    // 3. The sweep, on one C#4 string plucked by the strum.
+    {
+        auto pluck = [&](float jaw) {
+            PluginExporter p(nullptr, nullptr, recordRequestCallback, nullptr);
+            p.setParameterValue(idx(p, "mix"),         1.0f);
+            p.setParameterValue(idx(p, "stereo_mode"), 0.0f);
+            p.setParameterValue(idx(p, "gate"),        0.0f);
+            p.setParameterValue(idx(p, "num_active"),  1.0f);
+            p.setParameterValue(idx(p, "octave"),      4.0f);
+            p.setParameterValue(idx(p, "root_note"),   1.0f);
+            p.setParameterValue(idx(p, "decay"),       0.7f);
+            p.setParameterValue(idx(p, "strum_level"), 0.5f);
+            p.setParameterValue(idx(p, "jawari"),      jaw);
+            p.activate();
+            p.setParameterValue(idx(p, "strum_up"), 1.0f);
+            const uint32_t B = 256;
+            std::vector<float> in(B, 0.0f), l(B), r(B), all;
+            const float* ins[1] = { in.data() };
+            float* outs[2] = { l.data(), r.data() };
+            for (uint32_t b = 0; b < 48000 / B; ++b)
+            {
+                p.run(ins, outs, B);
+                all.insert(all.end(), l.begin(), l.end());
+            }
+            return all;
+        };
+        const std::vector<float> on = pluck(1.0f), off = pluck(0.0f);
+        auto mag = [](const std::vector<float>& x, size_t a, size_t n, double f) {
+            double re = 0.0, im = 0.0;
+            for (size_t i = 0; i < n; ++i)
+            {
+                const double w = 0.5 - 0.5 * std::cos(2.0 * M_PI * i / (n - 1));
+                re += w * x[a + i] * std::cos(2.0 * M_PI * f * i / 48000.0);
+                im -= w * x[a + i] * std::sin(2.0 * M_PI * f * i / 48000.0);
+            }
+            return std::sqrt(re * re + im * im);
+        };
+        auto formant = [&](double t) {
+            const size_t a = static_cast<size_t>(t * 48000.0), n = 3840;   // 80 ms
+            double best = 0.0, bestRatio = 0.0;
+            for (double f = 200.0; f < 6000.0; f *= std::pow(2.0, 1.0 / 6.0))
+            {
+                const double ratio = mag(on, a, n, f) / (mag(off, a, n, f) + 1e-12);
+                if (ratio > bestRatio) { bestRatio = ratio; best = f; }
+            }
+            return best;
+        };
+        const double early = formant(0.02), later = formant(0.5);
+        std::printf("string formant: %.0f Hz at the attack, %.0f Hz after 0.5 s\n", early, later);
+        if (early < 1200.0 || later > 700.0)
+        {
+            std::printf("FAIL: JAWARI does not sweep down over a string's ring\n");
+            ++failures;
+        }
+    }
+
+    if (failures > 0) return 1;
+    std::printf("ok: jawari is continuous at 0, adds no level boost, and sweeps each string\n");
     return 0;
 }
