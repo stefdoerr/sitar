@@ -1,4 +1,5 @@
 # Compiled test binaries — only sources are tracked
 *
 !*.cpp
+!*.py
 !.gitignore

@@ -174,6 +174,8 @@ test:
 		g++ $(TEST_CXXFLAGS) $$t $(TEST_SRCS) -o $$bin; \
 		$$bin; \
 	done
+	@echo "==> tests/test_modgui_hooks.py"
+	@python3 tests/test_modgui_hooks.py
 	@echo "==> all tests passed"
 
 .PHONY: test

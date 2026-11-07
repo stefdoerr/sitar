@@ -6,8 +6,9 @@ actual rendering of the pedal (real fonts, real knob sprites, real CSS gradients
 Pipeline:
   1. Read icon-sitar.html and resolve the Mustache template tokens MOD-UI would
      normally fill in at runtime (brand, label, color, knob, audio-port loops).
-  2. Read stylesheet-sitar.css and rewrite the `/resources/...{{{ns}}}` knob URL
-     to a file:// path so chromium can load the sprite locally.
+  2. Read stylesheet-sitar.css and rewrite every `/resources/...{{{ns}}}` URL
+     (knob sprite, textures, fonts) to a file:// path in this folder so chromium
+     loads them locally.
   3. Inline the stylesheet, give the body a WIDTH×HEIGHT viewport with overflow:hidden
      so the audio jacks (which stick out at -44px) are cropped away — matching
      real MOD plugin screenshots that show only the pedal frame.
@@ -29,12 +30,11 @@ from playwright.sync_api import sync_playwright
 HERE   = os.path.dirname(os.path.abspath(__file__))
 ICON   = os.path.join(HERE, "icon-sitar.html")
 STYLE  = os.path.join(HERE, "stylesheet-sitar.css")
-SPRITE = os.path.join(HERE, "knobs", "sitar-knob.png")
 OUT    = os.path.join(HERE, "screenshot-sitar.png")
 OUT_EDITOR = os.path.join(HERE, "screenshot-editor.png")
 
-WIDTH  = 862
-HEIGHT = 220
+WIDTH  = 540
+HEIGHT = 345
 # Device pixel ratio for the render. 2x keeps the same WIDTHxHEIGHT CSS layout but
 # outputs it at 2x — crisper on HiDPI screens and in the printed manual. The
 # 128px knob sprite frames (shown at 46px) still downscale, so knobs stay sharp.
@@ -104,13 +104,13 @@ def render_template(html: str) -> str:
     return html
 
 
-def render_stylesheet(css: str, sprite_url: str) -> str:
+def render_stylesheet(css: str) -> str:
     # Apply the same substitutions as the HTML (mostly to handle {{{ns}}}).
     for k, v in SUBSTITUTIONS.items():
         css = css.replace(k, v)
-    # Rewrite the knob sprite URL to point at our local file.
-    css = css.replace("/resources/knobs/sitar-knob.png", sprite_url)
-    return css
+    # MOD serves this folder as /resources/ — point every resource (knob
+    # sprite, textures, fonts) at the local file instead.
+    return css.replace("url(/resources/", "url(file://" + HERE + "/")
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +121,7 @@ def main():
     with open(ICON,  "r", encoding="utf-8") as f: icon_html = f.read()
     with open(STYLE, "r", encoding="utf-8") as f: css       = f.read()
 
-    sprite_url = "file://" + SPRITE
-    css        = render_stylesheet(css, sprite_url)
+    css        = render_stylesheet(css)
     pedal_html = render_template(icon_html)
 
     if EDITOR:
@@ -150,6 +149,8 @@ def main():
     overflow: hidden;
     background: transparent;
   }}
+  /* mod-ui sets border-box page-wide; mirror it. */
+  * {{ box-sizing: border-box; }}
   /* MOD-UI hosts the pedal inside a positioned container; mirror that so
      position:absolute on .sitar-pedal anchors to (0,0) of the viewport. */
   .pedal-host {{ position: relative; width: {WIDTH}px; height: {HEIGHT}px; }}
@@ -172,6 +173,8 @@ def main():
             tab.goto("file://" + page_path)
             # Give the browser a moment to lay out and load the sprite.
             tab.wait_for_load_state("networkidle")
+            # ...and for the bundled web fonts, so the shot never shows fallbacks.
+            tab.evaluate("() => document.fonts.ready.then(() => true)")
 
             tmp_out = os.path.join(tmp, "screenshot.png")
             tab.screenshot(path=tmp_out, omit_background=False, full_page=False)
