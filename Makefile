@@ -98,9 +98,11 @@ modgui: ttl
 	@if ls $(PLUGIN_DIR)/modgui/*.png >/dev/null 2>&1; then \
 		cp -f $(PLUGIN_DIR)/modgui/*.png $(BUNDLE)/modgui/; \
 	fi
-	@if [ -d $(PLUGIN_DIR)/modgui/knobs ]; then \
-		cp -rf $(PLUGIN_DIR)/modgui/knobs $(BUNDLE)/modgui/; \
-	fi
+	@# Resource dirs served as /resources/<dir>/... (knob sprite, painted
+	@# textures, bundled fonts). src/ holds generator inputs and is NOT shipped.
+	@for d in knobs textures fonts; do \
+		if [ -d $(PLUGIN_DIR)/modgui/$$d ]; then cp -rf $(PLUGIN_DIR)/modgui/$$d $(BUNDLE)/modgui/; fi; \
+	done
 	@# Beginner PDF manual -> "documentation" button in the plugin info
 	@# dialog (referenced from modgui.ttl). Copied under a FIXED name so a
 	@# plugin rename can't break the TTL reference.

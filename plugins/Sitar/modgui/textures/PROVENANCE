@@ -1,0 +1,27 @@
+Texture provenance — Sympathetic Sitar modgui ("Raga Night" face)
+
+All four images are crops of ragamala paintings from The Metropolitan Museum
+of Art's Open Access collection: public domain (CC0), free to use, modify and
+redistribute. Crop boxes are fractions of the full-resolution image
+(x0, y0, x1, y1). Downloaded 2026-11-07.
+
+sky.jpg
+  Solanki Raga, folio from a Ragamala, ca. 1590 (Met object 452418)
+  https://www.metmuseum.org/art/collection/search/452418
+  https://images.metmuseum.org/CRDImages/is/original/DP241348.jpg
+  crop (.35, .31, .64, .43), resized to 1080 px wide, JPEG q80
+
+frame-red.jpg
+  Dipak Raga, folio from a Ragamala series, 1630-40 (Met object 37905)
+  https://www.metmuseum.org/art/collection/search/37905
+  https://images.metmuseum.org/CRDImages/as/original/DP156152.jpg
+  crop (.045, .30, .075, .80) — left red margin, JPEG q80
+
+band-h.jpg
+  Ragini Bhairavi, 18th century (Met object 450584)
+  https://www.metmuseum.org/art/collection/search/450584
+  https://images.metmuseum.org/CRDImages/is/original/sf45-174-2r.jpg
+  crop (.12, .0825, .88, .109) — navy leaf border band, resized to 32 px tall, JPEG q85
+
+band-v.jpg
+  band-h.jpg rotated -90 degrees
