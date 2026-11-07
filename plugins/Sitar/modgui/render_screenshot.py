@@ -149,8 +149,9 @@ def main():
     overflow: hidden;
     background: transparent;
   }}
-  /* mod-ui sets border-box page-wide; mirror it. */
-  * {{ box-sizing: border-box; }}
+  /* mod-ui sets border-box page-wide, and its main.css forces Cooper Hewitt on
+     everything with !important; mirror both so the shot shows what MOD shows. */
+  * {{ box-sizing: border-box; font-family: "cooper hewitt", sans-serif !important; }}
   /* MOD-UI hosts the pedal inside a positioned container; mirror that so
      position:absolute on .sitar-pedal anchors to (0,0) of the viewport. */
   .pedal-host {{ position: relative; width: {WIDTH}px; height: {HEIGHT}px; }}

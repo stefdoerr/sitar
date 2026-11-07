@@ -14,7 +14,7 @@
  *     the face looks the same on every viewer's machine and another plugin's
  *     "Lato" can't replace ours.
  *
- * NOTE: .sitar-pedal width/height must stay in sync with WIDTH/HEIGHT in
+ * NOTE: .sitar-pedal{{{cns}}} width/height must stay in sync with WIDTH/HEIGHT in
  * modgui/render_screenshot.py, and the jack offsets at the bottom of this file.
  */
 
@@ -35,11 +35,16 @@
 }
 
 /* ============================ Pedal frame ============================ */
-.sitar-pedal,
-.sitar-pedal * {
+/* Every selector carries {{{cns}}} (mod-ui renders it per plugin URI + version):
+   mod-ui keeps each loaded version's stylesheet in <head>, so without it a
+   stable and a beta Sitar on one page would restyle each other. */
+.sitar-pedal{{{cns}}},
+.sitar-pedal{{{cns}}} * {
     box-sizing: border-box;
+    /* !important: mod-ui's main.css forces *{font-family:"cooper hewitt" !important}. */
+    font-family: "SitarLato", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
 }
-.sitar-pedal {
+.sitar-pedal{{{cns}}} {
     width: 540px;
     height: 345px;
     position: absolute;
@@ -52,37 +57,36 @@
         inset 0 0 0 1px rgba(0, 0, 0, 0.6),
         inset 0 0 14px rgba(60, 0, 0, 0.5);
     color: #f2e2b0;
-    font-family: "SitarLato", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-.sitar-pedal .mod-drag-handle {
+.sitar-pedal{{{cns}}} .mod-drag-handle {
     position: absolute;
     inset: 0;
     z-index: 0;
     cursor: move;
 }
 
-.sitar-pedal .mod-plugin-brand,
-.sitar-pedal .mod-plugin-name,
-.sitar-pedal .sitar-body,
-.sitar-pedal .mod-light,
-.sitar-pedal .mod-pedal-input,
-.sitar-pedal .mod-pedal-output {
+.sitar-pedal{{{cns}}} .mod-plugin-brand,
+.sitar-pedal{{{cns}}} .mod-plugin-name,
+.sitar-pedal{{{cns}}} .sitar-body,
+.sitar-pedal{{{cns}}} .mod-light,
+.sitar-pedal{{{cns}}} .mod-pedal-input,
+.sitar-pedal{{{cns}}} .mod-pedal-output {
     z-index: 1;
 }
 
 /* ============================ Painted decoration ============================ */
-.sitar-pedal .sitar-deco {
+.sitar-pedal{{{cns}}} .sitar-deco {
     position: absolute;
     inset: 0;
     z-index: 0;
     pointer-events: none;
 }
-.sitar-pedal .sitar-deco > div { position: absolute; }
+.sitar-pedal{{{cns}}} .sitar-deco > div { position: absolute; }
 
 /* Violet flower-sprig sky (Solanki Raga), washed toward indigo so the
    controls stay readable, with a saffron glow behind the title. */
-.sitar-pedal .sitar-panel {
+.sitar-pedal{{{cns}}} .sitar-panel {
     inset: 25px;
     border-radius: 2px;
     background:
@@ -95,46 +99,45 @@
 }
 
 /* Blue-and-gold illuminated border band (Ragini Bhairavi), 16 px, 9 px in. */
-.sitar-pedal .sitar-band-t,
-.sitar-pedal .sitar-band-b {
+.sitar-pedal{{{cns}}} .sitar-band-t,
+.sitar-pedal{{{cns}}} .sitar-band-b {
     left: 9px; right: 9px; height: 16px;
     background: url(/resources/textures/band-h.jpg{{{ns}}}) repeat-x 0 0 / auto 16px;
 }
-.sitar-pedal .sitar-band-t { top: 9px; }
-.sitar-pedal .sitar-band-b { bottom: 9px; }
-.sitar-pedal .sitar-band-l,
-.sitar-pedal .sitar-band-r {
+.sitar-pedal{{{cns}}} .sitar-band-t { top: 9px; }
+.sitar-pedal{{{cns}}} .sitar-band-b { bottom: 9px; }
+.sitar-pedal{{{cns}}} .sitar-band-l,
+.sitar-pedal{{{cns}}} .sitar-band-r {
     top: 9px; bottom: 9px; width: 16px;
     background: url(/resources/textures/band-v.jpg{{{ns}}}) repeat-y 0 0 / 16px auto;
 }
-.sitar-pedal .sitar-band-l { left: 9px; }
-.sitar-pedal .sitar-band-r { right: 9px; }
+.sitar-pedal{{{cns}}} .sitar-band-l { left: 9px; }
+.sitar-pedal{{{cns}}} .sitar-band-r { right: 9px; }
 
 /* Gold corner studs covering the band joins. */
-.sitar-pedal .sitar-stud {
+.sitar-pedal{{{cns}}} .sitar-stud {
     width: 18px; height: 18px;
     border-radius: 3px;
     background: radial-gradient(circle, #fff3c4 0 2px, #e8bb55 2.5px 5px, #8a5d14 5.5px 6.5px, #1d2a66 7px);
     box-shadow: 0 0 0 1px #e8bb55;
 }
-.sitar-pedal .sitar-stud-tl { top: 8px; left: 8px; }
-.sitar-pedal .sitar-stud-tr { top: 8px; right: 8px; }
-.sitar-pedal .sitar-stud-bl { bottom: 8px; left: 8px; }
-.sitar-pedal .sitar-stud-br { bottom: 8px; right: 8px; }
+.sitar-pedal{{{cns}}} .sitar-stud-tl { top: 8px; left: 8px; }
+.sitar-pedal{{{cns}}} .sitar-stud-tr { top: 8px; right: 8px; }
+.sitar-pedal{{{cns}}} .sitar-stud-bl { bottom: 8px; left: 8px; }
+.sitar-pedal{{{cns}}} .sitar-stud-br { bottom: 8px; right: 8px; }
 
 /* ============================ Branding ============================ */
-.sitar-pedal .mod-plugin-brand,
-.sitar-pedal .mod-plugin-name {
+.sitar-pedal{{{cns}}} .mod-plugin-brand,
+.sitar-pedal{{{cns}}} .mod-plugin-name {
     position: absolute;
     left: 0;
     right: 0;
     text-align: center;
     pointer-events: none;
 }
-.sitar-pedal .mod-plugin-brand { top: 36px; }
-.sitar-pedal .mod-plugin-brand h1 {
+.sitar-pedal{{{cns}}} .mod-plugin-brand { top: 36px; }
+.sitar-pedal{{{cns}}} .mod-plugin-brand h1 {
     margin: 0;
-    font-family: inherit;
     font-size: 10px;
     line-height: 13px;
     font-weight: 400;
@@ -142,10 +145,10 @@
     text-transform: uppercase;
     color: #f2a93b;
 }
-.sitar-pedal .mod-plugin-name { top: 53px; }
-.sitar-pedal .mod-plugin-name h1 {
+.sitar-pedal{{{cns}}} .mod-plugin-name { top: 53px; }
+.sitar-pedal{{{cns}}} .mod-plugin-name h1 {
     margin: 0;
-    font-family: "SitarRakkas", Georgia, serif;
+    font-family: "SitarRakkas", Georgia, serif !important;
     font-size: 29px;
     line-height: 30px;
     font-weight: 400;
@@ -164,8 +167,8 @@
    footswitch is a transparent hit area over the same 44x37 box. mod-ui's
    pedals.css puts red-light images on `.mod-pedal .mod-light.on/.off`, hence
    the !important. */
-.sitar-pedal .mod-light,
-.sitar-pedal .mod-footswitch {
+.sitar-pedal{{{cns}}} .mod-light,
+.sitar-pedal{{{cns}}} .mod-footswitch {
     position: absolute;
     left: 40px;
     top: 38px;
@@ -178,36 +181,38 @@
     background: none !important;
     box-shadow: none;
 }
-.sitar-pedal .mod-light { pointer-events: none; }
-.sitar-pedal .mod-footswitch { cursor: pointer; }
-.sitar-pedal .sitar-lotus {
+.sitar-pedal{{{cns}}} .mod-light { pointer-events: none; }
+/* pedals.css sets .mod-footswitch{z-index:20}, which would put this invisible
+   hit area over the open scale editor (z 3) and let clicks there bypass. */
+.sitar-pedal{{{cns}}} .mod-footswitch { cursor: pointer; z-index: 2 !important; }
+.sitar-pedal{{{cns}}} .sitar-lotus {
     display: block;
     width: 44px;
     height: 37px;
     overflow: visible;
 }
-.sitar-pedal .sitar-lotus-pt {
+.sitar-pedal{{{cns}}} .sitar-lotus-pt {
     transform-box: view-box;
     transform-origin: 18px 23px;
     transform: rotate(var(--a));
     transition: transform 0.35s ease, filter 0.35s;
 }
-.sitar-pedal .sitar-lotus-glow { transition: opacity 0.25s; }
+.sitar-pedal{{{cns}}} .sitar-lotus-glow { transition: opacity 0.25s; }
 /* Bypassed: petals fold into a bud, dimmed, no glow. */
-.sitar-pedal .mod-light.off .sitar-lotus-pt {
+.sitar-pedal{{{cns}}} .mod-light.off .sitar-lotus-pt {
     transform: rotate(calc(var(--a) * 0.18));
     filter: brightness(0.75);
 }
-.sitar-pedal .mod-light.off .sitar-lotus-glow { opacity: 0; }
+.sitar-pedal{{{cns}}} .mod-light.off .sitar-lotus-glow { opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
-    .sitar-pedal .sitar-lotus-pt,
-    .sitar-pedal .sitar-lotus-glow { transition: none; }
+    .sitar-pedal{{{cns}}} .sitar-lotus-pt,
+    .sitar-pedal{{{cns}}} .sitar-lotus-glow { transition: none; }
 }
 
 /* ============================ Buttons (black bakelite + brass ring) ============================ */
-.sitar-pedal .sitar-btn,
-.sitar-pedal .sitar-editbtn,
-.sitar-pedal .sitar-editor-btn {
+.sitar-pedal{{{cns}}} .sitar-btn,
+.sitar-pedal{{{cns}}} .sitar-editbtn,
+.sitar-pedal{{{cns}}} .sitar-editor-btn {
     background: radial-gradient(circle at 36% 28%, #5a5a5a, #161616 55%, #000);
     border: 2px solid #c99a45;
     color: #f1d797;
@@ -215,7 +220,7 @@
     cursor: pointer;
     user-select: none;
 }
-.sitar-pedal .sitar-btn {
+.sitar-pedal{{{cns}}} .sitar-btn {
     width: 26px;
     height: 26px;
     border-radius: 50%;
@@ -224,12 +229,12 @@
     align-items: center;
     justify-content: center;
 }
-.sitar-pedal .sitar-btn svg {
+.sitar-pedal{{{cns}}} .sitar-btn svg {
     width: 11px;
     height: 11px;
     display: block;
 }
-.sitar-pedal .sitar-btn.on {
+.sitar-pedal{{{cns}}} .sitar-btn.on {
     background: radial-gradient(circle at 36% 30%, #ffe08a, #f2a93b 60%, #9a5a06);
     border-color: #f6d27a;
     color: #2a1505;
@@ -237,7 +242,7 @@
 }
 
 /* Scale-editor trigger, top-right; its centre mirrors the lotus's. */
-.sitar-pedal .sitar-editbtn {
+.sitar-pedal{{{cns}}} .sitar-editbtn {
     position: absolute;
     top: 46px;
     right: 49px;
@@ -252,7 +257,7 @@
 }
 
 /* ============================ Controls ============================ */
-.sitar-pedal .sitar-body {
+.sitar-pedal{{{cns}}} .sitar-body {
     position: absolute;
     top: 91px;
     left: 0;
@@ -263,13 +268,13 @@
 }
 
 /* Selector bar — captions sit above the boxes. */
-.sitar-pedal .sitar-scale-bar {
+.sitar-pedal{{{cns}}} .sitar-scale-bar {
     display: flex;
     align-items: flex-end;
     justify-content: center;
     gap: 14px;
 }
-.sitar-pedal .sitar-field {
+.sitar-pedal{{{cns}}} .sitar-field {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -280,43 +285,42 @@
     margin: 0;
     font-weight: normal;
 }
-.sitar-pedal .sitar-field-label,
-.sitar-pedal .sitar-sec-title,
-.sitar-pedal .mod-knob-title {
+.sitar-pedal{{{cns}}} .sitar-field-label,
+.sitar-pedal{{{cns}}} .sitar-sec-title,
+.sitar-pedal{{{cns}}} .mod-knob-title {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
-.sitar-pedal .sitar-field-label {
+.sitar-pedal{{{cns}}} .sitar-field-label {
     font-size: 9px;
     line-height: 11px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: #f2a93b;
 }
-.sitar-pedal .sitar-select {
+.sitar-pedal{{{cns}}} .sitar-select {
     height: 22px;
     padding: 2px 4px;
     background: rgba(8, 12, 34, 0.85);
     color: #f6dc93;
     border: 1px solid rgba(232, 187, 85, 0.55);
     border-radius: 4px;
-    font-family: inherit;
     font-size: 11px;
     outline: none;
     cursor: pointer;
 }
-.sitar-pedal .sitar-select:hover { border-color: #e8bb55; }
-.sitar-pedal .sitar-select option,
-.sitar-pedal .sitar-select optgroup {
+.sitar-pedal{{{cns}}} .sitar-select:hover { border-color: #e8bb55; }
+.sitar-pedal{{{cns}}} .sitar-select option,
+.sitar-pedal{{{cns}}} .sitar-select optgroup {
     background: #0e1636;
     color: #f6dc93;
 }
-.sitar-pedal .sitar-select-scale  { width: 150px; }
-.sitar-pedal .sitar-select-root   { width: 52px; }
-.sitar-pedal .sitar-select-stereo { width: 108px; }
+.sitar-pedal{{{cns}}} .sitar-select-scale  { width: 150px; }
+.sitar-pedal{{{cns}}} .sitar-select-root   { width: 52px; }
+.sitar-pedal{{{cns}}} .sitar-select-stereo { width: 108px; }
 
 /* Knob sprite (knobs/sitar-knob.png, see generate_knob.py). The shadow is
    added here, not baked into the sprite. */
-.sitar-pedal .mod-knob-image {
+.sitar-pedal{{{cns}}} .mod-knob-image {
     background-image: url(/resources/knobs/sitar-knob.png{{{ns}}});
     background-repeat: no-repeat;
     background-position: left center;
@@ -325,49 +329,49 @@
 }
 
 /* Knob rows, grouped by signal path, with hairline gold dividers. */
-.sitar-pedal .sitar-sections {
+.sitar-pedal{{{cns}}} .sitar-sections {
     display: flex;
     justify-content: center;
     align-items: flex-start;
     margin-top: 14px;
 }
-.sitar-pedal .sitar-sections + .sitar-sections { margin-top: 12px; }
-.sitar-pedal .sitar-sec {
+.sitar-pedal{{{cns}}} .sitar-sections + .sitar-sections { margin-top: 12px; }
+.sitar-pedal{{{cns}}} .sitar-sec {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 7px;
     padding: 0 12px;
 }
-.sitar-pedal .sitar-sec + .sitar-sec {
+.sitar-pedal{{{cns}}} .sitar-sec + .sitar-sec {
     border-left: 1px solid rgba(232, 187, 85, 0.3);
 }
-.sitar-pedal .sitar-sec-title {
+.sitar-pedal{{{cns}}} .sitar-sec-title {
     font-size: 8.5px;
     line-height: 10px;
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: #f2a93b;
 }
-.sitar-pedal .sitar-sec-knobs {
+.sitar-pedal{{{cns}}} .sitar-sec-knobs {
     display: flex;
     gap: 8px;
     align-items: flex-start;
 }
-.sitar-pedal .sitar-knob {
+.sitar-pedal{{{cns}}} .sitar-knob {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
     width: 52px;
 }
-.sitar-pedal .sitar-knob .mod-knob-image {
+.sitar-pedal{{{cns}}} .sitar-knob .mod-knob-image {
     width: 46px;
     height: 46px;
     background-size: auto 46px;
     filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.6));
 }
-.sitar-pedal .sitar-knob .mod-knob-title {
+.sitar-pedal{{{cns}}} .sitar-knob .mod-knob-title {
     font-size: 9.5px;
     line-height: 1.15;
     letter-spacing: 0.1em;
@@ -378,13 +382,13 @@
 }
 
 /* Strum up/down: a stacked pair centred on the knobs beside it (tuned by eye). */
-.sitar-pedal .sitar-strum-btns {
+.sitar-pedal{{{cns}}} .sitar-strum-btns {
     display: flex;
     flex-direction: column;
     gap: 4px;
     margin-top: -3px;
 }
-.sitar-pedal .sitar-strum-btns .sitar-btn {
+.sitar-pedal{{{cns}}} .sitar-strum-btns .sitar-btn {
     width: 24px;
     height: 24px;
 }
@@ -399,12 +403,12 @@
    Math (pedal height 345 -> centre 172.5; jack 56px tall; 13px gap):
      input  (1 jack) : top = 172.5 - 56/2                    = 144.5 -> 145px
      output (2 jacks): stack = 2*56 + 13 = 125; top = 172.5 - 125/2 = 110px
-   Recompute these if .sitar-pedal height or the input/output port count changes. */
-.sitar-pedal .mod-pedal-input  { top: 145px; }
-.sitar-pedal .mod-pedal-output { top: 110px; }
+   Recompute these if .sitar-pedal{{{cns}}} height or the input/output port count changes. */
+.sitar-pedal{{{cns}}} .mod-pedal-input  { top: 145px; }
+.sitar-pedal{{{cns}}} .mod-pedal-output { top: 110px; }
 
 /* ============================ User-scale editor overlay ============================ */
-.sitar-pedal .sitar-editor {
+.sitar-pedal{{{cns}}} .sitar-editor {
     position: absolute;
     top: 34px;
     left: 34px;
@@ -419,37 +423,36 @@
     flex-direction: column;
     gap: 8px;
 }
-.sitar-pedal .sitar-editor-row {
+.sitar-pedal{{{cns}}} .sitar-editor-row {
     display: flex;
     align-items: center;
     gap: 8px;
     justify-content: space-between;
 }
-.sitar-pedal .sitar-editor-title {
+.sitar-pedal{{{cns}}} .sitar-editor-title {
     font-size: 9px;
     letter-spacing: 0.2em;
     color: #f2a93b;
 }
-.sitar-pedal .sitar-editor-close {
+.sitar-pedal{{{cns}}} .sitar-editor-close {
     cursor: pointer;
     color: #f1d797;
     font-size: 12px;
 }
-.sitar-pedal .sitar-editor-name,
-.sitar-pedal .sitar-editor-ivals {
+.sitar-pedal{{{cns}}} .sitar-editor-name,
+.sitar-pedal{{{cns}}} .sitar-editor-ivals {
     height: 24px;
     padding: 3px 6px;
     background: rgba(8, 12, 34, 0.85);
     color: #f6dc93;
     border: 1px solid rgba(232, 187, 85, 0.55);
     border-radius: 4px;
-    font-family: inherit;
     font-size: 11px;
     outline: none;
 }
-.sitar-pedal .sitar-editor-name { flex: 1; }
-.sitar-pedal .sitar-editor-ivals { width: 100%; }
-.sitar-pedal .sitar-editor-btn {
+.sitar-pedal{{{cns}}} .sitar-editor-name { flex: 1; }
+.sitar-pedal{{{cns}}} .sitar-editor-ivals { width: 100%; }
+.sitar-pedal{{{cns}}} .sitar-editor-btn {
     border-radius: 4px;
     padding: 4px 12px;
     font-size: 11px;

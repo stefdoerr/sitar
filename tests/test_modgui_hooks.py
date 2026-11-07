@@ -18,6 +18,12 @@ ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODGUI = os.path.join(ROOT, "plugins", "Sitar", "modgui")
 html   = open(os.path.join(MODGUI, "icon-sitar.html"), encoding="utf-8").read()
 js     = open(os.path.join(MODGUI, "script-sitar.js"), encoding="utf-8").read()
+# The stylesheet is a Mustache template: swap its {{{cns}}}/{{{ns}}} tokens out so
+# their braces don't confuse the rule parser below.
+css    = re.sub(r"/\*.*?\*/", "", open(os.path.join(MODGUI, "stylesheet-sitar.css"),
+              encoding="utf-8").read(), flags=re.DOTALL) \
+           .replace("{{{cns}}}", "__CNS__").replace("{{{ns}}}", "")
+SCOPE  = ".sitar-pedal__CNS__"     # mod-ui renders {{{cns}}} per plugin URI + version
 
 CONTROL_PORTS = {
     "gate", "sensitivity", "num_active", "octave", "decay", "bloom", "jawari",
@@ -40,6 +46,18 @@ def tags(attr_re):
 def attr(tag, name):
     m = re.search(name + r'="([^"]*)"', tag)
     return m.group(1) if m else None
+
+
+def css_rules():
+    """(selector, body) of every plain rule (inside @media too; @font-face skipped)."""
+    return [(sel.strip(), body) for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css)
+            if not sel.strip().startswith("@")]
+
+
+def z_index(selector_part):
+    zs = [int(m.group(1)) for sel, body in css_rules() if selector_part in sel
+          for m in [re.search(r"z-index:\s*(-?\d+)", body)] if m]
+    return zs[-1] if zs else None
 
 
 def js_array(name):
@@ -69,9 +87,46 @@ def test_dropdown_values_match_script():
     assert select_options("sitar-stereo") == js_array("STEREO_KEYS")
 
 
+def test_styles_scoped_to_this_plugin_version():
+    # mod-ui keeps every loaded plugin version's stylesheet in <head>, so a
+    # stable and a beta Sitar on one page would restyle each other unless every
+    # selector (and the face's root class) carries the per-version {{{cns}}}.
+    root = re.search(r'<div class="([^"]*)"', html).group(1).split()
+    assert "sitar-pedal{{{cns}}}" in root and "sitar-pedal" not in root, root
+    for sel, _ in css_rules():
+        for part in sel.split(","):
+            assert part.strip().startswith(SCOPE), f"unscoped selector: {part.strip()!r}"
+
+
+def test_fonts_beat_modui_important():
+    # mod-ui's main.css has *{font-family:"cooper hewitt",Sans-serif !important};
+    # a font-family without !important never applies on a real pedalboard.
+    decls = [(sel, d) for sel, body in css_rules() for d in re.findall(r"font-family:[^;]*", body)]
+    assert decls, "no font-family declarations"
+    for sel, d in decls:
+        assert d.rstrip().endswith("!important"), f"{sel}: {d}"
+    joined = " ".join(d for _, d in decls)
+    assert "SitarRakkas" in joined and "SitarLato" in joined
+
+
+def test_footswitch_below_editor():
+    # pedals.css gives .mod-footswitch z-index 20; ours must stay under the open
+    # scale editor or its invisible hit area bypasses the effect.
+    fs, ed = z_index(".mod-footswitch"), z_index(".sitar-editor")
+    assert fs is not None and ed is not None and fs < ed, (fs, ed)
+
+
 if __name__ == "__main__":
+    import sys
+    failed = 0
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
-            fn()
-            print("ok ", name)
+            try:
+                fn()
+                print("ok  ", name)
+            except AssertionError as e:
+                failed += 1
+                print("FAIL", name, "-", e)
+    if failed:
+        sys.exit(f"modgui hooks: {failed} failed")
     print("modgui hooks: all passed")
