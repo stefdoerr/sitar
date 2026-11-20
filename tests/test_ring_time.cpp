@@ -84,9 +84,10 @@ static float ringSeconds(float octave)
     p.setParameterValue(idx(p, "decay"),       0.7f);
     p.setParameterValue(idx(p, "strum_level"), 0.1f);   // keep the tanh stages linear
     p.activate();
+    uint32_t t = 0;
+    run(p, 1, [](uint32_t) { return 0.0f; }, t);   // triggers before the first run are ignored
     p.setParameterValue(idx(p, "strum_up"), 1.0f);
 
-    uint32_t t = 0;
     const std::vector<float> o = run(p, 12 * 48000 / kBlock, [](uint32_t) { return 0.0f; }, t);
     const size_t win = 960;   // 20 ms
     float peak = -300.0f;

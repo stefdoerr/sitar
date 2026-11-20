@@ -140,11 +140,12 @@ int main()
             p.setParameterValue(idx(p, "strum_level"), 0.5f);
             p.setParameterValue(idx(p, "jawari"),      jaw);
             p.activate();
-            p.setParameterValue(idx(p, "strum_up"), 1.0f);
             const uint32_t B = 256;
             std::vector<float> in(B, 0.0f), l(B), r(B), all;
             const float* ins[1] = { in.data() };
             float* outs[2] = { l.data(), r.data() };
+            p.run(ins, outs, B);   // triggers before the first run are ignored
+            p.setParameterValue(idx(p, "strum_up"), 1.0f);
             for (uint32_t b = 0; b < 48000 / B; ++b)
             {
                 p.run(ins, outs, B);

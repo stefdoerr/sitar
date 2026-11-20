@@ -722,7 +722,10 @@ protected:
             break;
         case kParamStrumUp:
         case kParamStrumDown:
-            if (value > 0.5f)
+            // Before the first run() this is a loaded value, not a press:
+            // mod-ui saves a strum button clicked in the web GUI as 1, and the
+            // pedalboard would strum on every load (see fHasRun).
+            if (value > 0.5f && fHasRun)
                 startStrum(index == kParamStrumUp);
             break;
         case kParamStrumTime:
@@ -786,6 +789,7 @@ protected:
         fGateEnvelope  = 0.0f;
         fGateOpen      = 1.0f;
         fStrumActive   = false;
+        fHasRun        = false;
         fLeadSweep.reset();
         for (uint32_t i = 0; i < kNumStrings; ++i)
             fStringSweep[i].reset();
@@ -825,6 +829,7 @@ protected:
 
     void run(const float** inputs, float** outputs, uint32_t frames) override
     {
+        fHasRun = true;
         const float* const in   = inputs[0];
         /* */ float* const outL = outputs[0];
         /* */ float* const outR = outputs[1];
@@ -1513,6 +1518,10 @@ private:
     float    fStrumAmp    = 1.0f;
     float    fSampleRate  = 48000.0f;
     bool     fStrumActive = false;
+    // False from activate() to the first run(). The host hands over saved
+    // port values in that window (mod-ui loads with processing off), so a
+    // strum trigger seen then is state, not a press.
+    bool     fHasRun      = false;
     uint32_t fStrumClock  = 0;
     uint32_t fStrumEnd    = 0;
     uint32_t fStrumStart[kNumStrings] {};

@@ -80,6 +80,11 @@ static void configure(PluginExporter& p, const Setup& s)
     p.setParameterValue(idx(p, "strum_level"), s.strength);
     p.setParameterValue(idx(p, "strum_time"),  500.0f);
     p.activate();
+    // One silent block: a trigger set before the first run is ignored (test 7).
+    float in[256] = {}, l[256], r[256];
+    const float* ins[1] = { in };
+    float* outs[2] = { l, r };
+    p.run(ins, outs, 256);
 }
 
 static std::vector<float> runFor(PluginExporter& p, float seconds)
@@ -268,6 +273,31 @@ int main()
         if (first - last < -8.0f || first - last > -4.0f)
         {
             std::printf("FAIL: %s does not ease in at half strength\n", dir);
+            ++failures;
+        }
+    }
+
+    // 7. No strum on load: a pedalboard saved with a strum button at 1 hands
+    //    that value over between activate() and the first run(). It must not
+    //    strum (the Dwarf strummed on every boot); a press after it must.
+    {
+        PluginExporter p(nullptr, nullptr, recordRequestCallback, nullptr);
+        p.setParameterValue(idx(p, "mix"), 1.0f);
+        p.activate();
+        p.setParameterValue(idx(p, "strum_down"), 1.0f);
+        const float loaded = peak(runFor(p, 0.2f));
+        p.setParameterValue(idx(p, "strum_down"), 0.0f);   // host resets the trigger
+        p.setParameterValue(idx(p, "strum_down"), 1.0f);
+        const float pressed = peak(runFor(p, 0.2f));
+        std::printf("loaded trigger peak %.6f, pressed %.3f\n", loaded, pressed);
+        if (loaded > 1e-6f)
+        {
+            std::printf("FAIL: a saved strum trigger strums on load\n");
+            ++failures;
+        }
+        if (pressed < 1e-3f)
+        {
+            std::printf("FAIL: a strum press after load does nothing\n");
             ++failures;
         }
     }
